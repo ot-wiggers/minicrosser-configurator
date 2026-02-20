@@ -8,6 +8,7 @@ import { DocumentPreview } from '@/components/documents/document-preview'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { ArrowLeft, Download, FileText, Mail, CheckCircle } from 'lucide-react'
+import { SendEmailDialog } from '@/components/documents/send-email-dialog'
 
 function downloadPdf(bytes: Uint8Array, filename: string) {
   const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
@@ -127,7 +128,12 @@ export default function DocumentPage() {
 
       <DocumentPreview document={doc} />
 
-      {/* SendEmailDialog will be wired in Task 15 */}
+      <SendEmailDialog
+        open={showEmailDialog}
+        onOpenChange={setShowEmailDialog}
+        document={doc}
+        onSent={loadDocument}
+      />
     </div>
   )
 }
