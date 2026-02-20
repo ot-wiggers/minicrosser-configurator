@@ -1,18 +1,40 @@
 'use client'
 
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { OnlineIndicator } from './online-indicator'
 import { cn } from '@/lib/utils'
+import { outboxRepo } from '@/modules/storage'
 import { LayoutDashboard, SendHorizonal } from 'lucide-react'
-
-const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/outbox', label: 'Outbox', icon: SendHorizonal },
-]
 
 export function TopBar() {
   const pathname = usePathname()
+  const [pendingCount, setPendingCount] = useState(0)
+
+  const loadPendingCount = useCallback(async () => {
+    try {
+      const count = await outboxRepo.countPending()
+      setPendingCount(count)
+    } catch {
+      // IndexedDB may not be available during SSR
+    }
+  }, [])
+
+  useEffect(() => {
+    loadPendingCount()
+    const interval = setInterval(loadPendingCount, 10000)
+    window.addEventListener('online', loadPendingCount)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('online', loadPendingCount)
+    }
+  }, [loadPendingCount])
+
+  const navItems = [
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard, badge: 0 },
+    { href: '/outbox', label: 'Outbox', icon: SendHorizonal, badge: pendingCount },
+  ]
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
@@ -35,6 +57,11 @@ export function TopBar() {
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
+                {item.badge > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground">
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             ))}
           </nav>
