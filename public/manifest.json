@@ -1,0 +1,13 @@
+{
+  "name": "Mini Crosser Konfigurator",
+  "short_name": "MC Konfigurator",
+  "description": "Angebots- und Bestellkonfigurator für Mini Crosser",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#E8731A",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
