@@ -22,10 +22,12 @@ export function TopBar() {
   }, [])
 
   useEffect(() => {
-    loadPendingCount()
+    // Use setTimeout to avoid synchronous setState in effect body
+    const timeout = setTimeout(loadPendingCount, 0)
     const interval = setInterval(loadPendingCount, 10000)
     window.addEventListener('online', loadPendingCount)
     return () => {
+      clearTimeout(timeout)
       clearInterval(interval)
       window.removeEventListener('online', loadPendingCount)
     }

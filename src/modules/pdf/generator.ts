@@ -1,6 +1,6 @@
 import type { DocumentRecord } from '@/modules/storage/types'
 import type { Catalog, VariantCategory } from '@/modules/catalog/types'
-import { getOptionGroupsForCategory, getOptionItemsForGroup, getSkuByCode } from '@/modules/catalog/selectors'
+import { getOptionItemsForGroup, getSkuByCode } from '@/modules/catalog/selectors'
 import {
   createContext,
   drawText,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { documentRepo } from '@/modules/storage'
 import type { DocumentRecord } from '@/modules/storage/types'
@@ -31,16 +31,17 @@ export function DocumentList() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([])
   const [searchQuery, setSearchQuery] = useState('')
 
-  useEffect(() => {
-    loadDocuments()
-  }, [searchQuery])
-
-  async function loadDocuments() {
+  const loadDocuments = useCallback(async () => {
     const docs = searchQuery
       ? await documentRepo.search(searchQuery)
       : await documentRepo.getAll()
     setDocuments(docs)
-  }
+  }, [searchQuery])
+
+  useEffect(() => {
+    const timeout = setTimeout(loadDocuments, 0)
+    return () => clearTimeout(timeout)
+  }, [loadDocuments])
 
   return (
     <div className="space-y-4">

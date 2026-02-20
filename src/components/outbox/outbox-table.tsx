@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { outboxRepo, documentRepo } from '@/modules/storage'
-import type { OutboxRecord, DocumentRecord } from '@/modules/storage/types'
+import type { OutboxRecord } from '@/modules/storage/types'
 import { processOutboxQueue } from '@/modules/email/outbox-worker'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
-import { RefreshCw, Send, Inbox } from 'lucide-react'
+import { RefreshCw, Inbox } from 'lucide-react'
 
 const statusVariant: Record<string, 'default' | 'secondary' | 'destructive'> = {
   PENDING: 'secondary',

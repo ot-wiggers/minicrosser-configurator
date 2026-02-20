@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { documentRepo } from '@/modules/storage'
 import type { DocumentRecord } from '@/modules/storage/types'
@@ -27,11 +27,7 @@ export default function DocumentPage() {
   const [loading, setLoading] = useState(true)
   const [showEmailDialog, setShowEmailDialog] = useState(false)
 
-  useEffect(() => {
-    loadDocument()
-  }, [params.id])
-
-  async function loadDocument() {
+  const loadDocument = useCallback(async () => {
     const id = Number(params.id)
     if (isNaN(id)) {
       setLoading(false)
@@ -40,7 +36,11 @@ export default function DocumentPage() {
     const record = await documentRepo.getById(id)
     setDoc(record ?? null)
     setLoading(false)
-  }
+  }, [params.id])
+
+  useEffect(() => {
+    loadDocument()
+  }, [loadDocument])
 
   async function handleDownloadPdf() {
     if (!doc) return

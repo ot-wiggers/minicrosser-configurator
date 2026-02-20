@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mini Crosser Konfigurator
 
-## Getting Started
+Offline-fähige Web-App (PWA) als Angebots-/Bestell-Konfigurator für Mini Crosser Elektromobile.
 
-First, run the development server:
+## Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env.local
+# Fill in your env vars (see below)
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `RESEND_API_KEY` | Resend API key for email sending | Yes (for email) |
+| `FROM_EMAIL` | Sender email address (must be verified in Resend) | Yes (for email) |
+| `NEXT_PUBLIC_APP_URL` | App URL | No (defaults to localhost) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy to Vercel
 
-## Learn More
+1. Push repo to GitHub
+2. Import in Vercel (vercel.com/new)
+3. Set environment variables in Vercel dashboard
+4. Deploy — `main` branch auto-deploys
 
-To learn more about Next.js, take a look at the following resources:
+## Resend Setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Create account at resend.com
+2. Add and verify your sending domain
+3. Create API key
+4. Set `RESEND_API_KEY` and `FROM_EMAIL` in env vars
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Brand Colors
 
-## Deploy on Vercel
+Edit `src/app/globals.css` to change the brand colors:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```css
+:root {
+  --brand: oklch(0.638 0.179 46.5);            /* #E8731A - bold orange */
+  --brand-foreground: oklch(1 0 0);             /* white */
+  --brand-muted: oklch(0.963 0.018 70);         /* light orange tint */
+  --brand-2: oklch(0.324 0.022 256);            /* dark anthracite */
+}
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Convert HEX to OKLCH: use oklch.com
+
+## Tech Stack
+
+- Next.js (App Router) + TypeScript
+- Tailwind CSS + shadcn/ui
+- Zustand (state)
+- Dexie.js (IndexedDB)
+- pdf-lib (PDF generation)
+- Resend (email)
+- @ducanh2912/next-pwa
+
+## Project Structure
+
+See `docs/plans/2026-02-20-minicrosser-configurator-design.md`
