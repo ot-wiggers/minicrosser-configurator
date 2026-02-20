@@ -1,0 +1,195 @@
+{
+  "skus": [
+    {
+      "sku_code": "MC-TRIKE-BASE",
+      "sku_type": "BASE",
+      "article_no": "MC-3W-001",
+      "name": "Mini Crosser M1 3W",
+      "description": "Dreirad-Elektromobil, 15 km/h, 40 km Reichweite",
+      "unit": "Stk",
+      "price_net": 4495.00,
+      "price_gross": 5348.05,
+      "is_active": true
+    },
+    {
+      "sku_code": "MC-QUAD-BASE",
+      "sku_type": "BASE",
+      "article_no": "MC-4W-001",
+      "name": "Mini Crosser M2 4W",
+      "description": "Vierrad-Elektromobil, 15 km/h, 45 km Reichweite",
+      "unit": "Stk",
+      "price_net": 5295.00,
+      "price_gross": 6300.05,
+      "is_active": true
+    },
+    {
+      "sku_code": "MC-HD-BASE",
+      "sku_type": "BASE",
+      "article_no": "MC-HD-001",
+      "name": "Mini Crosser M2 HD",
+      "description": "Heavy-Duty, bis 300 kg, 15 km/h",
+      "unit": "Stk",
+      "price_net": 6495.00,
+      "price_gross": 7729.05,
+      "is_active": true
+    },
+    {
+      "sku_code": "MC-CABIN-BASE",
+      "sku_type": "BASE",
+      "article_no": "MC-CAB-001",
+      "name": "Mini Crosser Cabin",
+      "description": "Kabinenmodell, wetterfest, 15 km/h",
+      "unit": "Stk",
+      "price_net": 7995.00,
+      "price_gross": 9514.05,
+      "is_active": true
+    },
+    {
+      "sku_code": "OPT-BAT-50",
+      "sku_type": "OPTION",
+      "article_no": "BAT-50AH",
+      "name": "Batterie 50 Ah",
+      "unit": "Stk",
+      "price_net": 549.00,
+      "price_gross": 653.31,
+      "is_active": true
+    },
+    {
+      "sku_code": "OPT-BAT-75",
+      "sku_type": "OPTION",
+      "article_no": "BAT-75AH",
+      "name": "Batterie 75 Ah",
+      "unit": "Stk",
+      "price_net": 749.00,
+      "price_gross": 891.31,
+      "is_active": true
+    },
+    {
+      "sku_code": "OPT-SEAT-STD",
+      "sku_type": "OPTION",
+      "article_no": "SEAT-001",
+      "name": "Standardsitz mit Armlehnen",
+      "unit": "Stk",
+      "price_net": 0.00,
+      "price_gross": 0.00,
+      "is_active": true
+    },
+    {
+      "sku_code": "OPT-SEAT-COMFORT",
+      "sku_type": "OPTION",
+      "article_no": "SEAT-002",
+      "name": "Komfortsitz mit Federung",
+      "unit": "Stk",
+      "price_net": 395.00,
+      "price_gross": 470.05,
+      "is_active": true
+    },
+    {
+      "sku_code": "OPT-SEAT-CAPTAIN",
+      "sku_type": "OPTION",
+      "article_no": "SEAT-003",
+      "name": "Captain Seat drehbar",
+      "unit": "Stk",
+      "price_net": 595.00,
+      "price_gross": 708.05,
+      "is_active": true
+    },
+    {
+      "sku_code": "OPT-BASKET",
+      "sku_type": "OPTION",
+      "article_no": "ACC-001",
+      "name": "Einkaufskorb hinten",
+      "unit": "Stk",
+      "price_net": 89.00,
+      "price_gross": 105.91,
+      "is_active": true
+    },
+    {
+      "sku_code": "OPT-CANOPY",
+      "sku_type": "OPTION",
+      "article_no": "ACC-002",
+      "name": "Sonnendach / Verdeck",
+      "unit": "Stk",
+      "price_net": 449.00,
+      "price_gross": 534.31,
+      "is_active": true
+    },
+    {
+      "sku_code": "OPT-MIRROR",
+      "sku_type": "OPTION",
+      "article_no": "ACC-003",
+      "name": "Spiegel-Set (links + rechts)",
+      "unit": "Stk",
+      "price_net": 59.00,
+      "price_gross": 70.21,
+      "is_active": true
+    },
+    {
+      "sku_code": "OPT-CRUTCH-HOLDER",
+      "sku_type": "OPTION",
+      "article_no": "ACC-004",
+      "name": "Gehstockhalter",
+      "unit": "Stk",
+      "price_net": 39.00,
+      "price_gross": 46.41,
+      "is_active": true
+    },
+    {
+      "sku_code": "OPT-OXYGEN",
+      "sku_type": "OPTION",
+      "article_no": "ACC-005",
+      "name": "Sauerstoffflaschenhalter",
+      "unit": "Stk",
+      "price_net": 79.00,
+      "price_gross": 94.01,
+      "is_active": true
+    }
+  ],
+  "base_models": [
+    { "id": "trike-m1", "name": "Mini Crosser M1 3W", "category": "TRIKE", "description": "Wendiges Dreirad für den Alltag" },
+    { "id": "quad-m2", "name": "Mini Crosser M2 4W", "category": "QUAD", "description": "Stabiles Vierrad für jedes Gelände" },
+    { "id": "hd-m2", "name": "Mini Crosser M2 HD", "category": "HD", "description": "Heavy-Duty bis 300 kg Belastung" },
+    { "id": "cabin", "name": "Mini Crosser Cabin", "category": "CABIN", "description": "Wetterfest mit geschlossener Kabine" }
+  ],
+  "base_model_skus": [
+    { "base_model_id": "trike-m1", "sku_code": "MC-TRIKE-BASE" },
+    { "base_model_id": "quad-m2", "sku_code": "MC-QUAD-BASE" },
+    { "base_model_id": "hd-m2", "sku_code": "MC-HD-BASE" },
+    { "base_model_id": "cabin", "sku_code": "MC-CABIN-BASE" }
+  ],
+  "option_groups": [
+    {
+      "id": "batteries",
+      "name": "Batterien",
+      "sort_order": 1,
+      "selection_type": "SINGLE",
+      "applicable_categories": ["TRIKE", "QUAD", "HD", "CABIN"]
+    },
+    {
+      "id": "seats",
+      "name": "Sitzoptionen",
+      "sort_order": 2,
+      "selection_type": "SINGLE",
+      "applicable_categories": ["TRIKE", "QUAD", "HD"]
+    },
+    {
+      "id": "accessories",
+      "name": "Weiteres Zubehör",
+      "sort_order": 3,
+      "selection_type": "MULTI",
+      "applicable_categories": ["TRIKE", "QUAD", "HD", "CABIN"]
+    }
+  ],
+  "option_items": [
+    { "id": "bat-50", "option_group_id": "batteries", "sku_code": "OPT-BAT-50", "sort_order": 1, "is_default": true },
+    { "id": "bat-75", "option_group_id": "batteries", "sku_code": "OPT-BAT-75", "sort_order": 2, "is_default": false },
+    { "id": "seat-std", "option_group_id": "seats", "sku_code": "OPT-SEAT-STD", "sort_order": 1, "is_default": true },
+    { "id": "seat-comfort", "option_group_id": "seats", "sku_code": "OPT-SEAT-COMFORT", "sort_order": 2, "is_default": false },
+    { "id": "seat-captain", "option_group_id": "seats", "sku_code": "OPT-SEAT-CAPTAIN", "sort_order": 3, "is_default": false },
+    { "id": "basket", "option_group_id": "accessories", "sku_code": "OPT-BASKET", "sort_order": 1, "is_default": false },
+    { "id": "canopy", "option_group_id": "accessories", "sku_code": "OPT-CANOPY", "sort_order": 2, "is_default": false },
+    { "id": "mirror", "option_group_id": "accessories", "sku_code": "OPT-MIRROR", "sort_order": 3, "is_default": false },
+    { "id": "crutch-holder", "option_group_id": "accessories", "sku_code": "OPT-CRUTCH-HOLDER", "sort_order": 4, "is_default": false },
+    { "id": "oxygen", "option_group_id": "accessories", "sku_code": "OPT-OXYGEN", "sort_order": 5, "is_default": false }
+  ]
+}
