@@ -7,6 +7,7 @@ import { CategoryPicker } from '@/components/configurator/category-picker'
 import { ModelPicker } from '@/components/configurator/model-picker'
 import { AccessoryPicker } from '@/components/configurator/accessory-picker'
 import { CartSidebar } from '@/components/configurator/cart-sidebar'
+import { CustomerFormDialog } from '@/components/configurator/customer-form-dialog'
 
 export default function ConfiguratorPage() {
   const { currentStep, documentType } = useConfiguratorStore()
@@ -36,7 +37,10 @@ export default function ConfiguratorPage() {
         )}
       </div>
 
-      {/* CustomerFormDialog will be wired in Task 12 */}
+      <CustomerFormDialog
+        open={showCustomerDialog}
+        onOpenChange={setShowCustomerDialog}
+      />
     </div>
   )
 }
