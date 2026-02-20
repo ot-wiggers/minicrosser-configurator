@@ -11,7 +11,8 @@ export const documentRepo = {
   },
 
   async create(doc: Omit<DocumentRecord, 'id'>): Promise<number> {
-    return db.documents.add(doc as DocumentRecord)
+    const id = await db.documents.add(doc as DocumentRecord)
+    return id as number
   },
 
   async updateStatus(id: number, status: DocumentStatus): Promise<void> {

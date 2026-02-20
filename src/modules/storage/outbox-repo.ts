@@ -11,7 +11,8 @@ export const outboxRepo = {
   },
 
   async create(record: Omit<OutboxRecord, 'id'>): Promise<number> {
-    return db.outbox.add(record as OutboxRecord)
+    const id = await db.outbox.add(record as OutboxRecord)
+    return id as number
   },
 
   async updateStatus(id: number, status: OutboxStatus, error?: string): Promise<void> {
