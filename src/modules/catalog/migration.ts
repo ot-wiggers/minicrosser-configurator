@@ -6,6 +6,7 @@ import type {
   OptionGroupRecord,
   OptionRecord,
 } from './db-types'
+import { seedAdminUser } from '@/modules/auth/seed'
 import catalogData from '@/data/catalog.json'
 
 const CATEGORY_NAMES: Record<string, string> = {
@@ -109,4 +110,7 @@ export async function migrateCatalogToDb(): Promise<void> {
       await db.settings.bulkPut(defaultSettings)
     },
   )
+
+  // Seed admin user after catalog migration
+  await seedAdminUser()
 }
