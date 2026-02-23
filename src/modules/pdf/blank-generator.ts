@@ -200,7 +200,7 @@ export async function generateBlankFormPdf(categoryId: string): Promise<Uint8Arr
       drawText(ctx, option.articleNo, colArtNr, { size: 8 })
 
       // Name with default diamond marker
-      const displayName = option.isDefault ? `${option.name} \u25C6` : option.name
+      const displayName = option.isDefault ? `${option.name} *` : option.name
       drawText(ctx, displayName, colName, { size: 8 })
 
       if (group.selectionType === 'MULTI') {
