@@ -1,7 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ImageIcon, X } from 'lucide-react'
 
 interface ImageUploadProps {
@@ -12,17 +11,18 @@ interface ImageUploadProps {
 
 export function ImageUpload({ value, onChange, label = 'Bild hochladen' }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const [preview, setPreview] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
 
-  useEffect(() => {
-    if (value) {
-      const url = URL.createObjectURL(value)
-      setPreview(url)
-      return () => URL.revokeObjectURL(url)
-    }
-    setPreview(null)
+  const preview = useMemo(() => {
+    if (!value) return null
+    return URL.createObjectURL(value)
   }, [value])
+
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview)
+    }
+  }, [preview])
 
   const handleFile = useCallback(
     (file: File) => {

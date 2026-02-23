@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/modules/storage/db'
 import { baseModelRepo } from '@/modules/storage'
-import type { BaseModelRecord, CategoryRecord } from '@/modules/catalog/db-types'
+import type { BaseModelRecord } from '@/modules/catalog/db-types'
 import { ImageUpload } from '@/components/admin/image-upload'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
@@ -42,36 +42,37 @@ const emptyForm = {
   imageBlob: undefined as Blob | undefined,
 }
 
-export function ModelForm({ open, onOpenChange, model }: ModelFormProps) {
+function ModelFormInner({
+  onOpenChange,
+  model,
+}: {
+  onOpenChange: (open: boolean) => void
+  model?: BaseModelRecord
+}) {
   const categories = useLiveQuery(() => db.categories.orderBy('sortOrder').toArray()) ?? []
 
-  const [form, setForm] = useState(emptyForm)
-  const [grossOverridden, setGrossOverridden] = useState(false)
-
-  useEffect(() => {
-    if (open) {
-      if (model) {
-        setForm({
-          categoryId: model.categoryId,
-          skuCode: model.skuCode,
-          articleNo: model.articleNo,
-          name: model.name,
-          description: model.description ?? '',
-          priceNet: model.priceNet,
-          priceGross: model.priceGross,
-          sortOrder: model.sortOrder,
-          isActive: model.isActive,
-          imageBlob: model.imageBlob,
-        })
-        // Check if gross was manually overridden (differs from calculated)
-        const calculated = Math.round(model.priceNet * VAT_RATE * 100) / 100
-        setGrossOverridden(Math.abs(model.priceGross - calculated) > 0.01)
-      } else {
-        setForm(emptyForm)
-        setGrossOverridden(false)
+  const [form, setForm] = useState(() => {
+    if (model) {
+      return {
+        categoryId: model.categoryId,
+        skuCode: model.skuCode,
+        articleNo: model.articleNo,
+        name: model.name,
+        description: model.description ?? '',
+        priceNet: model.priceNet,
+        priceGross: model.priceGross,
+        sortOrder: model.sortOrder,
+        isActive: model.isActive,
+        imageBlob: model.imageBlob,
       }
     }
-  }, [open, model])
+    return emptyForm
+  })
+  const [grossOverridden, setGrossOverridden] = useState(() => {
+    if (!model) return false
+    const calculated = Math.round(model.priceNet * VAT_RATE * 100) / 100
+    return Math.abs(model.priceGross - calculated) > 0.01
+  })
 
   function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => {
@@ -133,13 +134,12 @@ export function ModelForm({ open, onOpenChange, model }: ModelFormProps) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>{model ? 'Modell bearbeiten' : 'Neues Modell'}</SheetTitle>
-        </SheetHeader>
+    <>
+      <SheetHeader>
+        <SheetTitle>{model ? 'Modell bearbeiten' : 'Neues Modell'}</SheetTitle>
+      </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-4 pb-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-4 pb-4">
           {/* Category */}
           <div className="space-y-2">
             <Label>Kategorie</Label>
@@ -278,6 +278,21 @@ export function ModelForm({ open, onOpenChange, model }: ModelFormProps) {
             {model ? 'Speichern' : 'Erstellen'}
           </Button>
         </form>
+    </>
+  )
+}
+
+export function ModelForm({ open, onOpenChange, model }: ModelFormProps) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="overflow-y-auto sm:max-w-lg">
+        {open && (
+          <ModelFormInner
+            key={model?.id ?? 'new'}
+            onOpenChange={onOpenChange}
+            model={model}
+          />
+        )}
       </SheetContent>
     </Sheet>
   )

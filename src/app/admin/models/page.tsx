@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/modules/storage/db'
 import { baseModelRepo } from '@/modules/storage'
-import type { BaseModelRecord, CategoryRecord } from '@/modules/catalog/db-types'
+import type { BaseModelRecord } from '@/modules/catalog/db-types'
 import { ModelForm } from '@/components/admin/model-form'
 import {
   Select,
@@ -28,8 +28,10 @@ import { Plus, Pencil, Trash2, Car } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 export default function ModelsPage() {
-  const models = useLiveQuery(() => db.baseModels.orderBy('sortOrder').toArray()) ?? []
-  const categories = useLiveQuery(() => db.categories.orderBy('sortOrder').toArray()) ?? []
+  const modelsRaw = useLiveQuery(() => db.baseModels.orderBy('sortOrder').toArray())
+  const models = useMemo(() => modelsRaw ?? [], [modelsRaw])
+  const categoriesRaw = useLiveQuery(() => db.categories.orderBy('sortOrder').toArray())
+  const categories = useMemo(() => categoriesRaw ?? [], [categoriesRaw])
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editModel, setEditModel] = useState<BaseModelRecord | undefined>()

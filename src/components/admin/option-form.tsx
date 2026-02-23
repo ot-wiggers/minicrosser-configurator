@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/modules/storage/db'
 import { optionRepo } from '@/modules/storage'
@@ -23,62 +23,37 @@ interface OptionFormProps {
 
 const VAT_RATE = 1.19
 
-export function OptionForm({ open, onOpenChange, option }: OptionFormProps) {
+function OptionFormInner({
+  onOpenChange,
+  option,
+}: {
+  onOpenChange: (open: boolean) => void
+  option?: OptionRecord
+}) {
   const optionGroups = useLiveQuery(() => db.optionGroups.orderBy('sortOrder').toArray())
 
-  const [optionGroupId, setOptionGroupId] = useState('')
-  const [skuCode, setSkuCode] = useState('')
-  const [articleNo, setArticleNo] = useState('')
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [priceNet, setPriceNet] = useState('')
-  const [priceGross, setPriceGross] = useState('')
+  const [optionGroupId, setOptionGroupId] = useState(option?.optionGroupId ?? '')
+  const [skuCode, setSkuCode] = useState(option?.skuCode ?? '')
+  const [articleNo, setArticleNo] = useState(option?.articleNo ?? '')
+  const [name, setName] = useState(option?.name ?? '')
+  const [description, setDescription] = useState(option?.description ?? '')
+  const [priceNet, setPriceNet] = useState(option ? String(option.priceNet) : '')
+  const [priceGross, setPriceGross] = useState(option ? String(option.priceGross) : '')
   const [grossManuallyEdited, setGrossManuallyEdited] = useState(false)
-  const [sortOrder, setSortOrder] = useState('0')
-  const [isActive, setIsActive] = useState(true)
-  const [isDefault, setIsDefault] = useState(false)
-  const [imageBlob, setImageBlob] = useState<Blob | undefined>(undefined)
+  const [sortOrder, setSortOrder] = useState(option ? String(option.sortOrder) : '0')
+  const [isActive, setIsActive] = useState(option?.isActive ?? true)
+  const [isDefault, setIsDefault] = useState(option?.isDefault ?? false)
+  const [imageBlob, setImageBlob] = useState<Blob | undefined>(option?.imageBlob)
 
-  // Reset form when opening/closing or when editing a different option
-  useEffect(() => {
-    if (open && option) {
-      setOptionGroupId(option.optionGroupId)
-      setSkuCode(option.skuCode)
-      setArticleNo(option.articleNo)
-      setName(option.name)
-      setDescription(option.description ?? '')
-      setPriceNet(String(option.priceNet))
-      setPriceGross(String(option.priceGross))
-      setGrossManuallyEdited(false)
-      setSortOrder(String(option.sortOrder))
-      setIsActive(option.isActive)
-      setIsDefault(option.isDefault)
-      setImageBlob(option.imageBlob)
-    } else if (open) {
-      setOptionGroupId('')
-      setSkuCode('')
-      setArticleNo('')
-      setName('')
-      setDescription('')
-      setPriceNet('')
-      setPriceGross('')
-      setGrossManuallyEdited(false)
-      setSortOrder('0')
-      setIsActive(true)
-      setIsDefault(false)
-      setImageBlob(undefined)
-    }
-  }, [open, option])
-
-  // Auto-calculate gross from net unless manually overridden
-  useEffect(() => {
-    if (!grossManuallyEdited && priceNet !== '') {
-      const net = parseFloat(priceNet)
+  function handlePriceNetChange(value: string) {
+    setPriceNet(value)
+    if (!grossManuallyEdited && value !== '') {
+      const net = parseFloat(value)
       if (!isNaN(net)) {
         setPriceGross((Math.round(net * VAT_RATE * 100) / 100).toFixed(2))
       }
     }
-  }, [priceNet, grossManuallyEdited])
+  }
 
   function handleGrossChange(value: string) {
     setPriceGross(value)
@@ -129,140 +104,153 @@ export function OptionForm({ open, onOpenChange, option }: OptionFormProps) {
   }
 
   return (
+    <>
+      <SheetHeader>
+        <SheetTitle>{option ? 'Option bearbeiten' : 'Neue Option'}</SheetTitle>
+      </SheetHeader>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-4">
+        {/* Option Group */}
+        <div className="space-y-2">
+          <Label>Optionsgruppe *</Label>
+          <Select value={optionGroupId} onValueChange={setOptionGroupId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Gruppe auswahlen..." />
+            </SelectTrigger>
+            <SelectContent>
+              {optionGroups?.map((g) => (
+                <SelectItem key={g.id} value={g.id}>
+                  {g.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* SKU Code */}
+        <div className="space-y-2">
+          <Label htmlFor="skuCode">SKU Code *</Label>
+          <Input
+            id="skuCode"
+            value={skuCode}
+            onChange={(e) => setSkuCode(e.target.value)}
+            placeholder="z.B. OPT-001"
+          />
+        </div>
+
+        {/* Article No */}
+        <div className="space-y-2">
+          <Label htmlFor="articleNo">Artikelnummer *</Label>
+          <Input
+            id="articleNo"
+            value={articleNo}
+            onChange={(e) => setArticleNo(e.target.value)}
+            placeholder="z.B. 12345"
+          />
+        </div>
+
+        {/* Name */}
+        <div className="space-y-2">
+          <Label htmlFor="name">Name *</Label>
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Optionsname"
+          />
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2">
+          <Label htmlFor="description">Beschreibung</Label>
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Optionale Beschreibung..."
+            rows={3}
+          />
+        </div>
+
+        {/* Price Net / Gross */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="priceNet">Preis Netto (EUR) *</Label>
+            <Input
+              id="priceNet"
+              type="number"
+              step="0.01"
+              min="0"
+              value={priceNet}
+              onChange={(e) => handlePriceNetChange(e.target.value)}
+              placeholder="0.00"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="priceGross">Preis Brutto (EUR) *</Label>
+            <Input
+              id="priceGross"
+              type="number"
+              step="0.01"
+              min="0"
+              value={priceGross}
+              onChange={(e) => handleGrossChange(e.target.value)}
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+
+        {/* Sort Order */}
+        <div className="space-y-2">
+          <Label htmlFor="sortOrder">Sortierung</Label>
+          <Input
+            id="sortOrder"
+            type="number"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            placeholder="0"
+          />
+        </div>
+
+        {/* Active */}
+        <div className="flex items-center justify-between">
+          <Label htmlFor="isActive">Aktiv</Label>
+          <Switch id="isActive" checked={isActive} onCheckedChange={setIsActive} />
+        </div>
+
+        {/* Is Default */}
+        <div className="flex items-center justify-between">
+          <Label htmlFor="isDefault">Standard-Option</Label>
+          <Switch id="isDefault" checked={isDefault} onCheckedChange={setIsDefault} />
+        </div>
+
+        {/* Image */}
+        <div className="space-y-2">
+          <Label>Bild (optional)</Label>
+          <ImageUpload value={imageBlob} onChange={setImageBlob} />
+        </div>
+
+        {/* Submit */}
+        <Button type="submit" className="mt-2 w-full">
+          {option ? 'Speichern' : 'Erstellen'}
+        </Button>
+      </form>
+    </>
+  )
+}
+
+export function OptionForm({ open, onOpenChange, option }: OptionFormProps) {
+  return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>{option ? 'Option bearbeiten' : 'Neue Option'}</SheetTitle>
-        </SheetHeader>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-4">
-          {/* Option Group */}
-          <div className="space-y-2">
-            <Label>Optionsgruppe *</Label>
-            <Select value={optionGroupId} onValueChange={setOptionGroupId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Gruppe auswahlen..." />
-              </SelectTrigger>
-              <SelectContent>
-                {optionGroups?.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* SKU Code */}
-          <div className="space-y-2">
-            <Label htmlFor="skuCode">SKU Code *</Label>
-            <Input
-              id="skuCode"
-              value={skuCode}
-              onChange={(e) => setSkuCode(e.target.value)}
-              placeholder="z.B. OPT-001"
-            />
-          </div>
-
-          {/* Article No */}
-          <div className="space-y-2">
-            <Label htmlFor="articleNo">Artikelnummer *</Label>
-            <Input
-              id="articleNo"
-              value={articleNo}
-              onChange={(e) => setArticleNo(e.target.value)}
-              placeholder="z.B. 12345"
-            />
-          </div>
-
-          {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Optionsname"
-            />
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Beschreibung</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optionale Beschreibung..."
-              rows={3}
-            />
-          </div>
-
-          {/* Price Net */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="priceNet">Preis Netto (EUR) *</Label>
-              <Input
-                id="priceNet"
-                type="number"
-                step="0.01"
-                min="0"
-                value={priceNet}
-                onChange={(e) => setPriceNet(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-
-            {/* Price Gross */}
-            <div className="space-y-2">
-              <Label htmlFor="priceGross">Preis Brutto (EUR) *</Label>
-              <Input
-                id="priceGross"
-                type="number"
-                step="0.01"
-                min="0"
-                value={priceGross}
-                onChange={(e) => handleGrossChange(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-
-          {/* Sort Order */}
-          <div className="space-y-2">
-            <Label htmlFor="sortOrder">Sortierung</Label>
-            <Input
-              id="sortOrder"
-              type="number"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              placeholder="0"
-            />
-          </div>
-
-          {/* Active */}
-          <div className="flex items-center justify-between">
-            <Label htmlFor="isActive">Aktiv</Label>
-            <Switch id="isActive" checked={isActive} onCheckedChange={setIsActive} />
-          </div>
-
-          {/* Is Default */}
-          <div className="flex items-center justify-between">
-            <Label htmlFor="isDefault">Standard-Option</Label>
-            <Switch id="isDefault" checked={isDefault} onCheckedChange={setIsDefault} />
-          </div>
-
-          {/* Image */}
-          <div className="space-y-2">
-            <Label>Bild (optional)</Label>
-            <ImageUpload value={imageBlob} onChange={setImageBlob} />
-          </div>
-
-          {/* Submit */}
-          <Button type="submit" className="mt-2 w-full">
-            {option ? 'Speichern' : 'Erstellen'}
-          </Button>
-        </form>
+        {open && (
+          <OptionFormInner
+            key={option?.id ?? 'new'}
+            onOpenChange={onOpenChange}
+            option={option}
+          />
+        )}
       </SheetContent>
     </Sheet>
   )
