@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMutation } from 'convex/react'
+import { useAction } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
 import { useAuthStore } from '@/modules/auth/auth-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,8 +14,8 @@ import { Lock } from 'lucide-react'
 export default function AdminLoginPage() {
   const router = useRouter()
   const { isAuthenticated, user, setSession, setMustChangePassword } = useAuthStore()
-  const loginAdmin = useMutation(api.auth.loginAdmin)
-  const changePasswordMutation = useMutation(api.auth.changePassword)
+  const loginAdmin = useAction(api.auth.loginAdmin)
+  const changePasswordMutation = useAction(api.auth.changePassword)
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')

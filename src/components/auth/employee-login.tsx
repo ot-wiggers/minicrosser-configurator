@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuthStore } from '@/modules/auth/auth-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,7 +20,7 @@ import type { Id } from '../../../convex/_generated/dataModel'
 
 export function EmployeeLogin() {
   const employees = useQuery(api.users.listActive)
-  const loginEmployee = useMutation(api.auth.loginEmployee)
+  const loginEmployee = useAction(api.auth.loginEmployee)
   const { setSession } = useAuthStore()
 
   const [selectedUserId, setSelectedUserId] = useState('')

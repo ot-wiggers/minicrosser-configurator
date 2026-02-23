@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as authInternal from "../authInternal.js";
 import type * as baseModels from "../baseModels.js";
 import type * as categories from "../categories.js";
 import type * as customers from "../customers.js";
@@ -35,6 +36,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  authInternal: typeof authInternal;
   baseModels: typeof baseModels;
   categories: typeof categories;
   customers: typeof customers;

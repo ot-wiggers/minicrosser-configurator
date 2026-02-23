@@ -1,20 +1,54 @@
+"use node"
+
 import { v } from 'convex/values'
-import { mutation, query } from './_generated/server'
+import { action } from './_generated/server'
+import { internal } from './_generated/api'
+
+// ── Type definitions for return values ──
+
+interface AdminLoginResult {
+  token: string
+  user: {
+    id: string
+    name: string
+    username: string | undefined
+    role: string
+    mustChangePassword: boolean
+  }
+}
+
+interface EmployeeLoginResult {
+  token: string
+  user: {
+    id: string
+    name: string
+    role: string
+    mustChangePassword: boolean
+  }
+}
+
+interface SessionUser {
+  id: string
+  name: string
+  username: string | undefined
+  role: string
+  mustChangePassword: boolean
+}
+
+// ── Public Actions (run in Node.js, bcrypt available) ──
 
 /**
  * Login an admin user with username and password.
- * Password verification uses bcryptjs on the server side.
  */
-export const loginAdmin = mutation({
+export const loginAdmin = action({
   args: {
     username: v.string(),
     password: v.string(),
   },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query('users')
-      .withIndex('by_username', (q) => q.eq('username', args.username))
-      .first()
+  handler: async (ctx, args): Promise<AdminLoginResult> => {
+    const user = await ctx.runQuery(internal.authInternal.getUserByUsername, {
+      username: args.username,
+    })
 
     if (!user || !user.passwordHash || user.role !== 'admin') {
       throw new Error('Ungültige Anmeldedaten')
@@ -24,7 +58,6 @@ export const loginAdmin = mutation({
       throw new Error('Benutzer ist deaktiviert')
     }
 
-    // Dynamic import bcryptjs for server-side password verification
     const bcrypt = await import('bcryptjs')
     const isValid = await bcrypt.compare(args.password, user.passwordHash)
     if (!isValid) {
@@ -35,7 +68,7 @@ export const loginAdmin = mutation({
     const token = generateToken()
     const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 days
 
-    await ctx.db.insert('sessions', {
+    await ctx.runMutation(internal.authInternal.createSession, {
       userId: user._id,
       token,
       expiresAt,
@@ -57,13 +90,15 @@ export const loginAdmin = mutation({
 /**
  * Login an employee with their user ID and PIN.
  */
-export const loginEmployee = mutation({
+export const loginEmployee = action({
   args: {
     userId: v.id('users'),
     pin: v.string(),
   },
-  handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId)
+  handler: async (ctx, args): Promise<EmployeeLoginResult> => {
+    const user = await ctx.runQuery(internal.authInternal.getUserById, {
+      id: args.userId,
+    })
 
     if (!user || !user.pin || user.role !== 'employee') {
       throw new Error('Ungültige Anmeldedaten')
@@ -73,18 +108,16 @@ export const loginEmployee = mutation({
       throw new Error('Benutzer ist deaktiviert')
     }
 
-    // Verify PIN using bcryptjs
     const bcrypt = await import('bcryptjs')
     const isValid = await bcrypt.compare(args.pin, user.pin)
     if (!isValid) {
       throw new Error('Ungültige PIN')
     }
 
-    // Generate session token
     const token = generateToken()
-    const expiresAt = Date.now() + 12 * 60 * 60 * 1000 // 12 hours for employees
+    const expiresAt = Date.now() + 12 * 60 * 60 * 1000 // 12 hours
 
-    await ctx.db.insert('sessions', {
+    await ctx.runMutation(internal.authInternal.createSession, {
       userId: user._id,
       token,
       expiresAt,
@@ -103,21 +136,98 @@ export const loginEmployee = mutation({
 })
 
 /**
+ * Change password for the currently authenticated user.
+ */
+export const changePassword = action({
+  args: {
+    token: v.string(),
+    currentPassword: v.string(),
+    newPassword: v.string(),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const session = await ctx.runQuery(
+      internal.authInternal.getSessionByToken,
+      { token: args.token },
+    )
+
+    if (!session || session.expiresAt < Date.now()) {
+      throw new Error('Nicht authentifiziert')
+    }
+
+    const user = await ctx.runQuery(internal.authInternal.getUserById, {
+      id: session.userId,
+    })
+    if (!user || !user.passwordHash) {
+      throw new Error('Benutzer nicht gefunden')
+    }
+
+    const bcrypt = await import('bcryptjs')
+    const isValid = await bcrypt.compare(args.currentPassword, user.passwordHash)
+    if (!isValid) {
+      throw new Error('Aktuelles Passwort ist falsch')
+    }
+
+    const newHash = await bcrypt.hash(args.newPassword, 10)
+    await ctx.runMutation(internal.authInternal.updatePasswordHash, {
+      userId: user._id,
+      passwordHash: newHash,
+      mustChangePassword: false,
+    })
+  },
+})
+
+/**
+ * Change PIN for the currently authenticated user.
+ */
+export const changePin = action({
+  args: {
+    token: v.string(),
+    newPin: v.string(),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const session = await ctx.runQuery(
+      internal.authInternal.getSessionByToken,
+      { token: args.token },
+    )
+
+    if (!session || session.expiresAt < Date.now()) {
+      throw new Error('Nicht authentifiziert')
+    }
+
+    const user = await ctx.runQuery(internal.authInternal.getUserById, {
+      id: session.userId,
+    })
+    if (!user) {
+      throw new Error('Benutzer nicht gefunden')
+    }
+
+    const bcrypt = await import('bcryptjs')
+    const hashedPin = await bcrypt.hash(args.newPin, 10)
+    await ctx.runMutation(internal.authInternal.updatePinHash, {
+      userId: user._id,
+      pin: hashedPin,
+    })
+  },
+})
+
+/**
  * Validate an existing session token.
  */
-export const validateSession = query({
+export const validateSession = action({
   args: { token: v.string() },
-  handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query('sessions')
-      .withIndex('by_token', (q) => q.eq('token', args.token))
-      .first()
+  handler: async (ctx, args): Promise<SessionUser | null> => {
+    const session = await ctx.runQuery(
+      internal.authInternal.getSessionByToken,
+      { token: args.token },
+    )
 
     if (!session || session.expiresAt < Date.now()) {
       return null
     }
 
-    const user = await ctx.db.get(session.userId)
+    const user = await ctx.runQuery(internal.authInternal.getUserById, {
+      id: session.userId,
+    })
     if (!user || !user.isActive) {
       return null
     }
@@ -135,83 +245,18 @@ export const validateSession = query({
 /**
  * Logout by deleting the session.
  */
-export const logout = mutation({
+export const logout = action({
   args: { token: v.string() },
-  handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query('sessions')
-      .withIndex('by_token', (q) => q.eq('token', args.token))
-      .first()
+  handler: async (ctx, args): Promise<void> => {
+    const session = await ctx.runQuery(
+      internal.authInternal.getSessionByToken,
+      { token: args.token },
+    )
     if (session) {
-      await ctx.db.delete(session._id)
+      await ctx.runMutation(internal.authInternal.deleteSession, {
+        sessionId: session._id,
+      })
     }
-  },
-})
-
-/**
- * Change password for the currently authenticated user.
- */
-export const changePassword = mutation({
-  args: {
-    token: v.string(),
-    currentPassword: v.string(),
-    newPassword: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query('sessions')
-      .withIndex('by_token', (q) => q.eq('token', args.token))
-      .first()
-
-    if (!session || session.expiresAt < Date.now()) {
-      throw new Error('Nicht authentifiziert')
-    }
-
-    const user = await ctx.db.get(session.userId)
-    if (!user || !user.passwordHash) {
-      throw new Error('Benutzer nicht gefunden')
-    }
-
-    const bcrypt = await import('bcryptjs')
-    const isValid = await bcrypt.compare(args.currentPassword, user.passwordHash)
-    if (!isValid) {
-      throw new Error('Aktuelles Passwort ist falsch')
-    }
-
-    const newHash = await bcrypt.hash(args.newPassword, 10)
-    await ctx.db.patch(user._id, {
-      passwordHash: newHash,
-      mustChangePassword: false,
-    })
-  },
-})
-
-/**
- * Change PIN for the currently authenticated user.
- */
-export const changePin = mutation({
-  args: {
-    token: v.string(),
-    newPin: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query('sessions')
-      .withIndex('by_token', (q) => q.eq('token', args.token))
-      .first()
-
-    if (!session || session.expiresAt < Date.now()) {
-      throw new Error('Nicht authentifiziert')
-    }
-
-    const user = await ctx.db.get(session.userId)
-    if (!user) {
-      throw new Error('Benutzer nicht gefunden')
-    }
-
-    const bcrypt = await import('bcryptjs')
-    const hashedPin = await bcrypt.hash(args.newPin, 10)
-    await ctx.db.patch(user._id, { pin: hashedPin })
   },
 })
 

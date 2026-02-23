@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useMutation } from 'convex/react'
+import { useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuthStore } from '@/modules/auth/auth-store'
 import { cn } from '@/lib/utils'
@@ -32,7 +32,7 @@ const navItems = [
 export function AdminSidebar() {
   const pathname = usePathname()
   const { clearSession, user, token } = useAuthStore()
-  const logoutMutation = useMutation(api.auth.logout)
+  const logoutMutation = useAction(api.auth.logout)
 
   async function handleLogout() {
     if (token) {
