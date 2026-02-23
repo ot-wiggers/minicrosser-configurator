@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useConfiguratorStore } from '@/modules/configurator'
 import { db } from '@/modules/storage/db'
@@ -10,12 +11,52 @@ import { Input } from '@/components/ui/input'
 import { cn, formatCurrency } from '@/lib/utils'
 import { Check, Circle } from 'lucide-react'
 
+function useOptionImageUrls(
+  groupsWithOptions: { group: OptionGroupRecord; items: OptionRecord[] }[] | undefined,
+) {
+  const urlMap = useMemo(() => {
+    const map = new Map<string, string>()
+    if (!groupsWithOptions) return map
+    for (const { items } of groupsWithOptions) {
+      for (const item of items) {
+        if (item.imageBlob) {
+          map.set(item.id, URL.createObjectURL(item.imageBlob))
+        }
+      }
+    }
+    return map
+  }, [groupsWithOptions])
+
+  useEffect(() => {
+    return () => {
+      for (const url of urlMap.values()) {
+        URL.revokeObjectURL(url)
+      }
+    }
+  }, [urlMap])
+
+  return urlMap
+}
+
+function OptionThumbnail({ url }: { url?: string }) {
+  if (!url) return null
+  return (
+    <img
+      src={url}
+      alt=""
+      className="h-12 w-12 shrink-0 rounded-md border object-cover"
+    />
+  )
+}
+
 function SingleGroup({
   group,
   items,
+  imageUrls,
 }: {
   group: OptionGroupRecord
   items: OptionRecord[]
+  imageUrls: Map<string, string>
 }) {
   const { selectedOptions, toggleOption, removeOption } = useConfiguratorStore()
 
@@ -63,6 +104,7 @@ function SingleGroup({
                 >
                   {isSelected && <Circle className="h-2 w-2 fill-white text-white" />}
                 </div>
+                <OptionThumbnail url={imageUrls.get(item.id)} />
                 <div className="flex-1">
                   <p className="font-medium">{item.name}</p>
                   {item.description && (
@@ -84,9 +126,11 @@ function SingleGroup({
 function MultiGroup({
   group,
   items,
+  imageUrls,
 }: {
   group: OptionGroupRecord
   items: OptionRecord[]
+  imageUrls: Map<string, string>
 }) {
   const { selectedOptions, toggleOption, setOptionQuantity } = useConfiguratorStore()
 
@@ -122,6 +166,7 @@ function MultiGroup({
                 >
                   {isSelected && <Check className="h-3 w-3 text-white" />}
                 </div>
+                <OptionThumbnail url={imageUrls.get(item.id)} />
                 <div className="flex-1">
                   <p className="font-medium">{item.name}</p>
                   {item.description && (
@@ -173,6 +218,8 @@ export function AccessoryPicker() {
     [selectedCategory],
   )
 
+  const imageUrls = useOptionImageUrls(groupsWithOptions)
+
   if (!selectedCategory || !groupsWithOptions) return null
 
   return (
@@ -184,9 +231,9 @@ export function AccessoryPicker() {
           <div key={group.id}>
             {idx > 0 && <Separator className="mb-6" />}
             {group.selectionType === 'SINGLE' ? (
-              <SingleGroup group={group} items={items} />
+              <SingleGroup group={group} items={items} imageUrls={imageUrls} />
             ) : (
-              <MultiGroup group={group} items={items} />
+              <MultiGroup group={group} items={items} imageUrls={imageUrls} />
             )}
           </div>
         ))}
