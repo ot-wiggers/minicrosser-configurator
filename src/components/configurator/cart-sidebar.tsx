@@ -2,6 +2,7 @@
 
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { useConfiguratorStore } from '@/modules/configurator'
 import { calculatePricingFromItems } from '@/modules/pricing'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,7 +21,7 @@ export function CartSidebar({ onCreateDocument }: CartSidebarProps) {
 
   const baseModel = useQuery(
     api.baseModels.getById,
-    selectedBaseModelId ? { id: selectedBaseModelId as any } : 'skip',
+    selectedBaseModelId ? { id: selectedBaseModelId as Id<"baseModels"> } : 'skip',
   )
 
   // Calculate pricing from store data (selectedOptions already contains pricing info)

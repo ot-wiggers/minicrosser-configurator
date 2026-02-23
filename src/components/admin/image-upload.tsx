@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { ImageIcon, X, Loader2 } from 'lucide-react'
 
 interface ImageUploadProps {
@@ -16,7 +17,7 @@ export function ImageUpload({ storageId, onChange, label = 'Bild hochladen' }: I
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
   const generateUploadUrl = useMutation(api.files.generateUploadUrl)
-  const imageUrl = useQuery(api.files.getUrl, storageId ? { storageId: storageId as any } : 'skip')
+  const imageUrl = useQuery(api.files.getUrl, storageId ? { storageId: storageId as Id<"_storage"> } : 'skip')
 
   const handleFile = useCallback(
     async (file: File) => {

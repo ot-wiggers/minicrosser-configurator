@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { ImageUpload } from '@/components/admin/image-upload'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
@@ -34,7 +35,7 @@ function ModelFormInner({
   onOpenChange: (open: boolean) => void
   modelId?: string
 }) {
-  const model = useQuery(api.baseModels.getById, modelId ? { id: modelId as any } : 'skip')
+  const model = useQuery(api.baseModels.getById, modelId ? { id: modelId as Id<"baseModels"> } : 'skip')
   const categories = useQuery(api.categories.list) ?? []
   const createModel = useMutation(api.baseModels.create)
   const updateModel = useMutation(api.baseModels.update)
@@ -169,7 +170,7 @@ function ModelFormInner({
                 <SelectValue placeholder="Kategorie wahlen..." />
               </SelectTrigger>
               <SelectContent>
-                {(categories as any[]).map((cat: any) => (
+                {categories.map((cat) => (
                   <SelectItem key={cat._id} value={cat._id}>
                     {cat.name}
                   </SelectItem>

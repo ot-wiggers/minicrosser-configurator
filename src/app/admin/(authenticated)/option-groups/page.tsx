@@ -31,7 +31,7 @@ export default function OptionGroupsPage() {
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>()
     if (categories) {
-      for (const cat of categories as any[]) {
+      for (const cat of categories) {
         map.set(cat._id, cat.name)
       }
     }
@@ -42,7 +42,7 @@ export default function OptionGroupsPage() {
   const optionCountMap = useMemo(() => {
     const map = new Map<string, number>()
     if (options) {
-      for (const opt of options as any[]) {
+      for (const opt of options) {
         map.set(opt.optionGroupId, (map.get(opt.optionGroupId) ?? 0) + 1)
       }
     }
@@ -77,7 +77,7 @@ export default function OptionGroupsPage() {
     try {
       // Delete associated options first
       if (optionCount > 0 && options) {
-        const groupOptions = (options as any[]).filter((o: any) => o.optionGroupId === group._id)
+        const groupOptions = options.filter((o) => o.optionGroupId === group._id)
         for (const opt of groupOptions) {
           await removeOption({ id: opt._id })
         }
@@ -131,7 +131,7 @@ export default function OptionGroupsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(groups as any[]).map((group: any) => (
+            {groups.map((group) => (
               <TableRow key={group._id}>
                 <TableCell className="font-medium">{group.name}</TableCell>
                 <TableCell>

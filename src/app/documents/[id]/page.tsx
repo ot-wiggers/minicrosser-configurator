@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
+import type { Id } from '../../../../convex/_generated/dataModel'
 import { useConfiguratorStore } from '@/modules/configurator'
 import { DocumentPreview } from '@/components/documents/document-preview'
 import { VersionHistory } from '@/components/documents/version-history'
@@ -32,7 +33,7 @@ export default function DocumentPage() {
   const documentId = params.id as string
   const doc = useQuery(
     api.documents.getById,
-    documentId ? { id: documentId as any } : 'skip',
+    documentId ? { id: documentId as Id<"documents"> } : 'skip',
   )
   const updateStatus = useMutation(api.documents.updateStatus)
 
@@ -60,7 +61,7 @@ export default function DocumentPage() {
       const { generateBlankFormPdf } = await import('@/modules/pdf/blank-generator')
 
       const catalogData: BlankPdfCatalogData = {
-        baseModels: (allBaseModels as any[])
+        baseModels: allBaseModels
           .filter((m: any) => m.categoryId === doc.selectedCategory)
           .map((m: any) => ({
             articleNo: m.articleNo,
@@ -70,7 +71,7 @@ export default function DocumentPage() {
             isActive: m.isActive,
             sortOrder: m.sortOrder,
           })),
-        optionGroups: (allOptionGroups as any[]).map((g: any) => ({
+        optionGroups: allOptionGroups.map((g) => ({
           _id: g._id,
           name: g.name,
           selectionType: g.selectionType,
@@ -78,7 +79,7 @@ export default function DocumentPage() {
           sortOrder: g.sortOrder,
           appliesTo: g.appliesTo ?? [],
         })),
-        options: (allOptions as any[]).map((o: any) => ({
+        options: allOptions.map((o) => ({
           optionGroupId: o.optionGroupId,
           articleNo: o.articleNo,
           name: o.name,
@@ -114,10 +115,10 @@ export default function DocumentPage() {
     // Load document data into configurator store
     loadFromDocument({
       _id: doc._id,
-      documentType: doc.documentType as any,
+      documentType: doc.documentType,
       selectedCategory: doc.selectedCategory,
       selectedBaseModelId: doc.selectedBaseModelId,
-      selectedOptions: (doc.selectedOptions as any[]).map((opt: any) => ({
+      selectedOptions: doc.selectedOptions.map((opt) => ({
         optionItemId: opt.optionItemId,
         skuCode: opt.skuCode,
         articleNo: opt.articleNo ?? '',

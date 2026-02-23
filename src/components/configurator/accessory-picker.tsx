@@ -181,7 +181,7 @@ export function AccessoryPicker() {
       <h2 className="mb-2 text-xl font-semibold">Zubehör & Optionen</h2>
       <p className="mb-6 text-muted-foreground">Passen Sie Ihr Fahrzeug individuell an</p>
       <div className="space-y-6">
-        {(groupsWithOptions as any[]).map(({ group, items }: any, idx: number) => (
+        {groupsWithOptions.map(({ group, items }, idx: number) => (
           <div key={group._id}>
             {idx > 0 && <Separator className="mb-6" />}
             {group.selectionType === 'SINGLE' ? (

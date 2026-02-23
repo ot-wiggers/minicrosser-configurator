@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { useConfiguratorStore } from '@/modules/configurator'
 import { calculatePricingFromItems } from '@/modules/pricing'
 import type { CustomerData } from '@/modules/storage/types'
@@ -66,16 +67,16 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
 
   const baseModel = useQuery(
     api.baseModels.getById,
-    selectedBaseModelId ? { id: selectedBaseModelId as any } : 'skip',
+    selectedBaseModelId ? { id: selectedBaseModelId as Id<"baseModels"> } : 'skip',
   )
   // Load existing document data when editing
   const existingDoc = useQuery(
     api.documents.getById,
-    editingDocumentId ? { id: editingDocumentId as any } : 'skip',
+    editingDocumentId ? { id: editingDocumentId as Id<"documents"> } : 'skip',
   )
   const latestVersion = useQuery(
     api.documentVersions.getLatestVersion,
-    editingDocumentId ? { documentId: editingDocumentId as any } : 'skip',
+    editingDocumentId ? { documentId: editingDocumentId as Id<"documents"> } : 'skip',
   )
 
   const getNextSequence = useMutation(api.sequences.getNext)
@@ -196,7 +197,7 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
         documentNo,
         documentType,
         status: 'DRAFT',
-        customerId: customerId as any,
+        customerId: customerId as Id<"customers">,
         customer: {
           company: customer.company.trim(),
           firstName: customer.firstName.trim(),
@@ -247,9 +248,9 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
       const pricing = calculatePricingFromItems(baseModel, optionItems)
 
       // Create version snapshot of current document state
-      const nextVersionNumber = latestVersion ? (latestVersion as any).versionNumber + 1 : 1
+      const nextVersionNumber = latestVersion ? latestVersion.versionNumber + 1 : 1
       await createVersion({
-        documentId: editingDocumentId as any,
+        documentId: editingDocumentId as Id<"documents">,
         versionNumber: nextVersionNumber,
         snapshot: JSON.stringify(existingDoc),
         changeNote: changeNote || undefined,
@@ -271,8 +272,8 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
 
       // Update the document
       await updateDocument({
-        id: editingDocumentId as any,
-        customerId: customerId as any,
+        id: editingDocumentId as Id<"documents">,
+        customerId: customerId as Id<"customers">,
         customer: {
           company: customer.company.trim(),
           firstName: customer.firstName.trim(),

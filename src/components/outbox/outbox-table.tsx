@@ -36,7 +36,7 @@ export function OutboxTable() {
     toast.info('E-Mail-Verarbeitung wird in einem zukünftigen Update implementiert.')
   }
 
-  if (!outboxEntries || (outboxEntries as any[]).length === 0) {
+  if (!outboxEntries || outboxEntries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Inbox className="mb-4 h-12 w-12" />
@@ -66,7 +66,7 @@ export function OutboxTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {(outboxEntries as any[]).map((row: any) => (
+          {outboxEntries.map((row) => (
             <TableRow key={row._id}>
               <TableCell>{row.toEmail}</TableCell>
               <TableCell>{row.subject}</TableCell>

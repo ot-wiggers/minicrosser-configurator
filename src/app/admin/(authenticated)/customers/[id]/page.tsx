@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../../../../convex/_generated/api'
+import type { Id } from '../../../../../../convex/_generated/dataModel'
 import { CustomerForm } from '@/components/admin/customer-form'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -45,8 +46,8 @@ export default function CustomerDetailPage() {
   const router = useRouter()
   const customerId = params.id as string
 
-  const customer = useQuery(api.customers.getById, { id: customerId as any })
-  const documents = useQuery(api.documents.listByCustomerId, { customerId: customerId as any })
+  const customer = useQuery(api.customers.getById, { id: customerId as Id<"customers"> })
+  const documents = useQuery(api.documents.listByCustomerId, { customerId: customerId as Id<"customers"> })
   const removeCustomer = useMutation(api.customers.remove)
 
   const [formOpen, setFormOpen] = useState(false)
@@ -54,7 +55,7 @@ export default function CustomerDetailPage() {
 
   async function handleDelete() {
     try {
-      await removeCustomer({ id: customerId as any })
+      await removeCustomer({ id: customerId as Id<"customers"> })
       toast.success('Kunde geloescht.')
       router.push('/admin/customers')
     } catch (err) {
@@ -179,14 +180,14 @@ export default function CustomerDetailPage() {
           </Link>
         </CardHeader>
         <CardContent>
-          {(!documents || (documents as any[]).length === 0) ? (
+          {(!documents || documents.length === 0) ? (
             <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
               <FileText className="h-8 w-8" />
               <p className="text-sm">Noch keine Dokumente fuer diesen Kunden</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {(documents as any[]).map((doc: any) => (
+              {documents.map((doc) => (
                 <Link key={doc._id} href={`/documents/${doc._id}`}>
                   <div className="flex items-center justify-between rounded-md border p-3 transition-colors hover:bg-muted/50">
                     <div className="space-y-1">

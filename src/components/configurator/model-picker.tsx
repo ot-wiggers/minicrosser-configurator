@@ -2,6 +2,7 @@
 
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { useConfiguratorStore } from '@/modules/configurator'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -12,7 +13,7 @@ export function ModelPicker() {
 
   const models = useQuery(
     api.baseModels.listActiveByCategory,
-    selectedCategory ? { categoryId: selectedCategory as any } : 'skip',
+    selectedCategory ? { categoryId: selectedCategory as Id<"categories"> } : 'skip',
   )
 
   if (!selectedCategory || !models) return null
@@ -22,7 +23,7 @@ export function ModelPicker() {
       <h2 className="mb-2 text-xl font-semibold">Basisfahrzeug wählen</h2>
       <p className="mb-6 text-muted-foreground">Wählen Sie das passende Modell</p>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {(models as any[]).map((model: any) => (
+        {models.map((model) => (
           <Card
             key={model._id}
             className={cn(

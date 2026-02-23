@@ -27,7 +27,7 @@ export default function OptionsPage() {
   const groupMap = useMemo(() => {
     const map = new Map<string, string>()
     if (optionGroups) {
-      for (const g of optionGroups as any[]) {
+      for (const g of optionGroups) {
         map.set(g._id, g.name)
       }
     }
@@ -36,8 +36,8 @@ export default function OptionsPage() {
 
   const filteredOptions = useMemo(() => {
     if (!options) return []
-    if (filterGroupId === ALL_GROUPS) return options as any[]
-    return (options as any[]).filter((o: any) => o.optionGroupId === filterGroupId)
+    if (filterGroupId === ALL_GROUPS) return options
+    return options.filter((o) => o.optionGroupId === filterGroupId)
   }, [options, filterGroupId])
 
   function handleNew() {
@@ -81,7 +81,7 @@ export default function OptionsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL_GROUPS}>Alle Gruppen</SelectItem>
-            {optionGroups && (optionGroups as any[]).map((g: any) => (
+            {optionGroups && optionGroups.map((g) => (
               <SelectItem key={g._id} value={g._id}>
                 {g.name}
               </SelectItem>

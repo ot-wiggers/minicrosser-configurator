@@ -63,7 +63,7 @@ export function SettingsForm() {
   useEffect(() => {
     if (settings && !initialized) {
       const map: Record<string, string> = {}
-      for (const rec of settings as any[]) {
+      for (const rec of settings) {
         map[rec.key] = String(rec.value)
       }
       // Convert stored decimal vatRate to percentage for display
@@ -108,7 +108,7 @@ export function SettingsForm() {
           entries.push({ key, value: raw })
         }
       }
-      await setMany({ entries: entries as any })
+      await setMany({ entries })
       toast.success('Einstellungen gespeichert.')
     } catch {
       toast.error('Fehler beim Speichern der Einstellungen.')

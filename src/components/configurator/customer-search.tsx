@@ -49,7 +49,7 @@ export function CustomerSearch({ onSelect }: CustomerSearchProps) {
     setIsOpen(false)
   }
 
-  const results = (searchResults as any[] | undefined) ?? []
+  const results = searchResults ?? []
   const showDropdown = isOpen && query.trim().length >= 2 && results.length > 0
 
   return (

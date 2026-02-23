@@ -27,7 +27,7 @@ export function BlankPdfButtons() {
 
       // Build catalog data filtered for this category
       const catalogData: BlankPdfCatalogData = {
-        baseModels: (allBaseModels as any[])
+        baseModels: allBaseModels
           .filter((m: any) => m.categoryId === categoryId)
           .map((m: any) => ({
             articleNo: m.articleNo,
@@ -37,7 +37,7 @@ export function BlankPdfButtons() {
             isActive: m.isActive,
             sortOrder: m.sortOrder,
           })),
-        optionGroups: (allOptionGroups as any[]).map((g: any) => ({
+        optionGroups: allOptionGroups.map((g) => ({
           _id: g._id,
           name: g.name,
           selectionType: g.selectionType,
@@ -45,7 +45,7 @@ export function BlankPdfButtons() {
           sortOrder: g.sortOrder,
           appliesTo: g.appliesTo ?? [],
         })),
-        options: (allOptions as any[]).map((o: any) => ({
+        options: allOptions.map((o) => ({
           optionGroupId: o.optionGroupId,
           articleNo: o.articleNo,
           name: o.name,
@@ -74,11 +74,11 @@ export function BlankPdfButtons() {
     }
   }
 
-  if (!categories || (categories as any[]).length === 0) return null
+  if (!categories || categories.length === 0) return null
 
   return (
     <div className="flex flex-wrap gap-2">
-      {(categories as any[]).map((cat: any) => (
+      {categories.map((cat) => (
         <Button
           key={cat._id}
           variant="outline"

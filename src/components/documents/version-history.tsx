@@ -2,6 +2,7 @@
 
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils'
 import { History, FileEdit } from 'lucide-react'
@@ -13,14 +14,14 @@ interface VersionHistoryProps {
 export function VersionHistory({ documentId }: VersionHistoryProps) {
   const versions = useQuery(
     api.documentVersions.listByDocument,
-    { documentId: documentId as any },
+    { documentId: documentId as Id<"documents"> },
   )
 
-  if (!versions || (versions as any[]).length === 0) {
+  if (!versions || versions.length === 0) {
     return null
   }
 
-  const sortedVersions = [...(versions as any[])].sort(
+  const sortedVersions = [...versions].sort(
     (a, b) => b.versionNumber - a.versionNumber,
   )
 

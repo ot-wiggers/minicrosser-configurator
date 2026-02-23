@@ -45,7 +45,7 @@ export function CategoryPicker() {
       <h2 className="mb-2 text-xl font-semibold">Kategorie wählen</h2>
       <p className="mb-6 text-muted-foreground">Welcher Fahrzeugtyp passt am besten?</p>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {(categories as any[]).map((cat: any) => {
+        {categories.map((cat) => {
           const Icon = getIconForCategory(cat.name)
           return (
             <Card

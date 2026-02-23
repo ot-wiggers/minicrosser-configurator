@@ -40,7 +40,7 @@ export default function ModelsPage() {
   // Build a lookup map: categoryId -> category name
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>()
-    for (const cat of categories as any[]) {
+    for (const cat of categories) {
       map.set(cat._id, cat.name)
     }
     return map
@@ -48,7 +48,7 @@ export default function ModelsPage() {
 
   const filteredModels = useMemo(() => {
     if (filterCategoryId === 'all') return models
-    return (models as any[]).filter((m: any) => m.categoryId === filterCategoryId)
+    return models.filter((m) => m.categoryId === filterCategoryId)
   }, [models, filterCategoryId])
 
   function handleNew() {
@@ -90,7 +90,7 @@ export default function ModelsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle Kategorien</SelectItem>
-            {(categories as any[]).map((cat: any) => (
+            {categories.map((cat) => (
               <SelectItem key={cat._id} value={cat._id}>
                 {cat.name}
               </SelectItem>
@@ -123,7 +123,7 @@ export default function ModelsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(filteredModels as any[]).map((model: any) => (
+              {filteredModels.map((model) => (
                 <TableRow key={model._id}>
                   <TableCell>
                     {model.imageUrl ? (

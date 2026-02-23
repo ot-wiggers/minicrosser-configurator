@@ -38,8 +38,8 @@ export function DocumentList() {
   )
 
   const documents = useMemo(() => {
-    if (searchQuery.trim() && searchResults) return searchResults as any[]
-    if (!searchQuery.trim() && allDocuments) return allDocuments as any[]
+    if (searchQuery.trim() && searchResults) return searchResults
+    if (!searchQuery.trim() && allDocuments) return allDocuments
     return []
   }, [searchQuery, searchResults, allDocuments])
 

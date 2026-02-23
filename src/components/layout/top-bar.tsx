@@ -11,7 +11,7 @@ import { LayoutDashboard, SendHorizonal } from 'lucide-react'
 export function TopBar() {
   const pathname = usePathname()
   const outbox = useQuery(api.outbox.listPending)
-  const pendingCount = (outbox as any[] | undefined)?.length ?? 0
+  const pendingCount = outbox?.length ?? 0
 
   const navItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard, badge: 0 },

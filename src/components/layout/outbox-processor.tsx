@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { useQuery, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { useOnlineStatus } from '@/hooks/use-online-status'
 
 /**
@@ -17,15 +18,15 @@ export function OutboxProcessor() {
   const processingRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
-    if (!isOnline || !pendingEntries || (pendingEntries as any[]).length === 0) return
+    if (!isOnline || !pendingEntries || pendingEntries.length === 0) return
 
     // Process each pending entry that we haven't already started
-    for (const entry of pendingEntries as any[]) {
+    for (const entry of pendingEntries) {
       const id = entry._id as string
       if (processingRef.current.has(id)) continue
 
       processingRef.current.add(id)
-      sendEmail({ outboxId: id as any })
+      sendEmail({ outboxId: id as Id<"outbox"> })
         .then(() => {
           processingRef.current.delete(id)
         })

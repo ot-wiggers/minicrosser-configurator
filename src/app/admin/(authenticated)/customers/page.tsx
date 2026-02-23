@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../../../convex/_generated/api'
+import type { Id } from '../../../../../convex/_generated/dataModel'
 import { CustomerForm } from '@/components/admin/customer-form'
 import {
   Table,
@@ -39,7 +40,7 @@ export default function CustomersPage() {
 
   const filteredCustomers = useMemo(() => {
     if (!allCustomers) return []
-    const customers = allCustomers as any[]
+    const customers = allCustomers
     if (!searchQuery.trim()) return customers
     const lower = searchQuery.toLowerCase()
     return customers.filter(
@@ -65,7 +66,7 @@ export default function CustomersPage() {
   async function handleDelete() {
     if (!deleteCustomerId) return
     try {
-      await removeCustomer({ id: deleteCustomerId as any })
+      await removeCustomer({ id: deleteCustomerId as Id<"customers"> })
       toast.success('Kunde geloescht.')
     } catch (err) {
       console.error('Failed to delete customer:', err)

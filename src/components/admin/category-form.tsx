@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { ImageUpload } from '@/components/admin/image-upload'
 import {
   Sheet,
@@ -25,7 +26,7 @@ interface CategoryFormProps {
 }
 
 export function CategoryForm({ open, onOpenChange, categoryId }: CategoryFormProps) {
-  const category = useQuery(api.categories.getById, categoryId ? { id: categoryId as any } : 'skip')
+  const category = useQuery(api.categories.getById, categoryId ? { id: categoryId as Id<"categories"> } : 'skip')
   const createCategory = useMutation(api.categories.create)
   const updateCategory = useMutation(api.categories.update)
 

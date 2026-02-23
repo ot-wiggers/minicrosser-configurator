@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import {
   Sheet,
   SheetContent,
@@ -24,7 +25,7 @@ interface OptionGroupFormProps {
 }
 
 export function OptionGroupForm({ open, onOpenChange, groupId }: OptionGroupFormProps) {
-  const group = useQuery(api.optionGroups.getById, groupId ? { id: groupId as any } : 'skip')
+  const group = useQuery(api.optionGroups.getById, groupId ? { id: groupId as Id<"optionGroups"> } : 'skip')
   const categories = useQuery(api.categories.list)
   const createGroup = useMutation(api.optionGroups.create)
   const updateGroup = useMutation(api.optionGroups.update)
@@ -78,7 +79,7 @@ export function OptionGroupForm({ open, onOpenChange, groupId }: OptionGroupForm
     try {
       if (isEdit && groupId) {
         await updateGroup({
-          id: groupId as any,
+          id: groupId as Id<"optionGroups">,
           name: trimmedName,
           selectionType,
           appliesTo,
@@ -175,8 +176,8 @@ export function OptionGroupForm({ open, onOpenChange, groupId }: OptionGroupForm
               Keine Auswahl = gilt f&uuml;r alle Kategorien.
             </p>
             <div className="space-y-1.5 rounded-md border p-3 max-h-40 overflow-y-auto">
-              {categories && (categories as any[]).length > 0 ? (
-                (categories as any[]).map((cat: any) => (
+              {categories && categories.length > 0 ? (
+                categories.map((cat) => (
                   <label
                     key={cat._id}
                     className="flex items-center gap-2 text-sm cursor-pointer"

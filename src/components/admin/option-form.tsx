@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { ImageUpload } from '@/components/admin/image-upload'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
@@ -28,7 +29,7 @@ function OptionFormInner({
   onOpenChange: (open: boolean) => void
   optionId?: string
 }) {
-  const option = useQuery(api.options.getById, optionId ? { id: optionId as any } : 'skip')
+  const option = useQuery(api.options.getById, optionId ? { id: optionId as Id<"options"> } : 'skip')
   const optionGroups = useQuery(api.optionGroups.list)
   const createOption = useMutation(api.options.create)
   const updateOption = useMutation(api.options.update)
@@ -142,7 +143,7 @@ function OptionFormInner({
               <SelectValue placeholder="Gruppe auswahlen..." />
             </SelectTrigger>
             <SelectContent>
-              {optionGroups && (optionGroups as any[]).map((g: any) => (
+              {optionGroups && optionGroups.map((g) => (
                 <SelectItem key={g._id} value={g._id}>
                   {g.name}
                 </SelectItem>

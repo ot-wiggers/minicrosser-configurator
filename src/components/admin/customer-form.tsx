@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import {
   Sheet,
   SheetContent,
@@ -25,7 +26,7 @@ interface CustomerFormProps {
 export function CustomerForm({ open, onOpenChange, customerId }: CustomerFormProps) {
   const customer = useQuery(
     api.customers.getById,
-    customerId ? { id: customerId as any } : 'skip',
+    customerId ? { id: customerId as Id<"customers"> } : 'skip',
   )
   const createCustomer = useMutation(api.customers.create)
   const updateCustomer = useMutation(api.customers.update)
@@ -95,7 +96,7 @@ export function CustomerForm({ open, onOpenChange, customerId }: CustomerFormPro
     try {
       if (isEdit && customerId) {
         await updateCustomer({
-          id: customerId as any,
+          id: customerId as Id<"customers">,
           company: trimmedCompany,
           firstName: firstName.trim(),
           lastName: lastName.trim(),

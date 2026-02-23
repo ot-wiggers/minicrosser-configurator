@@ -24,51 +24,51 @@ export function CacheSync() {
   // Sync categories
   useEffect(() => {
     if (!categories) return
-    const hash = JSON.stringify((categories as any[]).map((c: any) => c._id))
+    const hash = JSON.stringify(categories.map((c) => c._id))
     if (lastSyncRef.current.categories === hash) return
     lastSyncRef.current.categories = hash
 
-    syncCategories(categories as any[]).catch(console.error)
+    syncCategories(categories).catch(console.error)
   }, [categories])
 
   // Sync baseModels
   useEffect(() => {
     if (!baseModels) return
-    const hash = JSON.stringify((baseModels as any[]).map((m: any) => m._id))
+    const hash = JSON.stringify(baseModels.map((m) => m._id))
     if (lastSyncRef.current.baseModels === hash) return
     lastSyncRef.current.baseModels = hash
 
-    syncBaseModels(baseModels as any[]).catch(console.error)
+    syncBaseModels(baseModels).catch(console.error)
   }, [baseModels])
 
   // Sync optionGroups
   useEffect(() => {
     if (!optionGroups) return
-    const hash = JSON.stringify((optionGroups as any[]).map((g: any) => g._id))
+    const hash = JSON.stringify(optionGroups.map((g) => g._id))
     if (lastSyncRef.current.optionGroups === hash) return
     lastSyncRef.current.optionGroups = hash
 
-    syncOptionGroups(optionGroups as any[]).catch(console.error)
+    syncOptionGroups(optionGroups).catch(console.error)
   }, [optionGroups])
 
   // Sync options
   useEffect(() => {
     if (!options) return
-    const hash = JSON.stringify((options as any[]).map((o: any) => o._id))
+    const hash = JSON.stringify(options.map((o) => o._id))
     if (lastSyncRef.current.options === hash) return
     lastSyncRef.current.options = hash
 
-    syncOptions(options as any[]).catch(console.error)
+    syncOptions(options).catch(console.error)
   }, [options])
 
   // Sync settings
   useEffect(() => {
     if (!settings) return
-    const hash = JSON.stringify((settings as any[]).map((s: any) => s.key))
+    const hash = JSON.stringify(settings.map((s) => s.key))
     if (lastSyncRef.current.settings === hash) return
     lastSyncRef.current.settings = hash
 
-    syncSettings(settings as any[]).catch(console.error)
+    syncSettings(settings).catch(console.error)
   }, [settings])
 
   return null
