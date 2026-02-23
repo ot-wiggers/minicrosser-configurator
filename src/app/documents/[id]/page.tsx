@@ -58,10 +58,8 @@ export default function DocumentPage() {
   async function handleDownloadBlankPdf() {
     if (!doc) return
     try {
-      const { generateBlankFormPdf } = await import('@/modules/pdf')
-      const { loadCatalog } = await import('@/modules/catalog')
-      const catalog = loadCatalog()
-      const bytes = await generateBlankFormPdf(catalog, doc.selectedCategory)
+      const { generateBlankFormPdf } = await import('@/modules/pdf/blank-generator')
+      const bytes = await generateBlankFormPdf(doc.selectedCategory.toLowerCase())
       downloadPdf(bytes, `Blanko-${doc.selectedCategory}.pdf`)
       toast.success('Blanko-PDF heruntergeladen')
     } catch (err) {

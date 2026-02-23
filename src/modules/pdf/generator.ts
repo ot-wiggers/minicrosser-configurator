@@ -1,6 +1,4 @@
 import type { DocumentRecord } from '@/modules/storage/types'
-import type { Catalog, VariantCategory } from '@/modules/catalog/types'
-import { getOptionItemsForGroup, getSkuByCode } from '@/modules/catalog/selectors'
 import {
   createContext,
   drawText,
@@ -8,9 +6,17 @@ import {
   moveDown,
   drawLine,
   drawHeading,
-  checkPageBreak,
   formatCurrencyPdf,
+  newPage,
 } from './helpers'
+import {
+  loadCorporateSettings,
+  drawCorporateHeader,
+  drawCorporateFooter,
+  drawAccentStripe,
+  type CorporateSettings,
+} from './corporate'
+import type { PDFContext } from './helpers'
 
 const typeLabel: Record<string, string> = {
   QUOTE: 'ANGEBOT',
@@ -22,22 +28,46 @@ function formatDatePdf(date: string): string {
   return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+function applyPageBranding(
+  ctx: PDFContext,
+  settings: CorporateSettings,
+) {
+  drawAccentStripe(ctx.page, settings.pdfColorAccent, ctx.pageHeight)
+  drawCorporateFooter(ctx.page, { regular: ctx.font }, settings, ctx.pageWidth)
+}
+
 export async function generateDocumentPdf(doc: DocumentRecord): Promise<Uint8Array> {
   const ctx = await createContext()
+  const settings = await loadCorporateSettings()
   const rightEdge = ctx.pageWidth - ctx.margin
 
-  // 1. Header
-  drawText(ctx, typeLabel[doc.document_type] ?? 'DOKUMENT', ctx.margin, {
-    size: 22,
-    bold: true,
-    color: { r: 0.91, g: 0.45, b: 0.1 },
-  })
-  drawTextRight(ctx, `Nr. ${doc.document_no}`, rightEdge, { size: 10 })
-  moveDown(ctx, 18)
-  drawTextRight(ctx, `Datum: ${formatDatePdf(doc.created_at)}`, rightEdge, { size: 10 })
-  moveDown(ctx, 30)
+  // Corporate header
+  const docTitle = typeLabel[doc.document_type] ?? 'DOKUMENT'
+  ctx.y = drawCorporateHeader(
+    ctx.page,
+    { regular: ctx.font, bold: ctx.fontBold },
+    settings,
+    docTitle,
+    ctx.pageWidth,
+  )
 
-  // 2. Customer block
+  // Page branding (accent stripe + footer)
+  applyPageBranding(ctx, settings)
+
+  // Override newPage to also brand subsequent pages
+  const originalCheckPageBreak = (neededHeight: number) => {
+    if (ctx.y - neededHeight < 60) {
+      newPage(ctx)
+      applyPageBranding(ctx, settings)
+    }
+  }
+
+  // Document number and date
+  drawText(ctx, `Nr. ${doc.document_no}`, ctx.margin, { size: 10 })
+  drawTextRight(ctx, `Datum: ${formatDatePdf(doc.created_at)}`, rightEdge, { size: 10 })
+  moveDown(ctx, 24)
+
+  // Customer block
   drawHeading(ctx, 'Kundendaten')
   drawText(ctx, doc.customer.company, ctx.margin, { bold: true })
   moveDown(ctx)
@@ -54,10 +84,9 @@ export async function generateDocumentPdf(doc: DocumentRecord): Promise<Uint8Arr
   }
   moveDown(ctx, 24)
 
-  // 3. Line items table
+  // Line items table
   drawHeading(ctx, 'Positionen')
 
-  // Table header
   const col1 = ctx.margin
   const col2 = ctx.margin + 80
   const col3 = rightEdge - 200
@@ -72,9 +101,8 @@ export async function generateDocumentPdf(doc: DocumentRecord): Promise<Uint8Arr
   moveDown(ctx, 6)
   drawLine(ctx, ctx.margin, rightEdge)
 
-  // Table rows
   for (const item of doc.pricing.lineItems) {
-    checkPageBreak(ctx, 20)
+    originalCheckPageBreak(20)
     drawText(ctx, item.articleNo, col1, { size: 9 })
     drawText(ctx, item.name, col2, { size: 9 })
     drawTextRight(ctx, String(item.quantity), col3, { size: 9 })
@@ -86,14 +114,14 @@ export async function generateDocumentPdf(doc: DocumentRecord): Promise<Uint8Arr
   moveDown(ctx, 8)
   drawLine(ctx, ctx.margin, rightEdge)
 
-  // 4. Summary
+  // Summary
   const summaryX = rightEdge - 180
 
   drawText(ctx, 'Netto', summaryX, { size: 10 })
   drawTextRight(ctx, formatCurrencyPdf(doc.pricing.totalNet), rightEdge, { size: 10 })
   moveDown(ctx)
 
-  drawText(ctx, 'MwSt. 19%', summaryX, { size: 10 })
+  drawText(ctx, `MwSt. ${Math.round(doc.pricing.vatRate * 100)}%`, summaryX, { size: 10 })
   drawTextRight(ctx, formatCurrencyPdf(doc.pricing.vatAmount), rightEdge, { size: 10 })
   moveDown(ctx, 8)
   drawLine(ctx, summaryX, rightEdge)
@@ -105,113 +133,16 @@ export async function generateDocumentPdf(doc: DocumentRecord): Promise<Uint8Arr
   })
   moveDown(ctx, 30)
 
-  // 5. Notes
+  // Notes
   if (doc.notes) {
-    checkPageBreak(ctx, 40)
+    originalCheckPageBreak(40)
     drawHeading(ctx, 'Bemerkungen')
     const lines = doc.notes.split('\n')
     for (const line of lines) {
-      checkPageBreak(ctx, 16)
+      originalCheckPageBreak(16)
       drawText(ctx, line, ctx.margin, { size: 9 })
       moveDown(ctx)
     }
-  }
-
-  return ctx.doc.save()
-}
-
-export async function generateBlankFormPdf(
-  catalog: Catalog,
-  category?: VariantCategory,
-): Promise<Uint8Array> {
-  const ctx = await createContext()
-  const rightEdge = ctx.pageWidth - ctx.margin
-
-  // 1. Header
-  drawText(ctx, 'ANGEBOT / BESTELLUNG', ctx.margin, {
-    size: 22,
-    bold: true,
-    color: { r: 0.91, g: 0.45, b: 0.1 },
-  })
-  moveDown(ctx, 18)
-  drawText(ctx, 'Nr.: ___________________________', ctx.margin, { size: 10 })
-  drawTextRight(ctx, 'Datum: _______________', rightEdge, { size: 10 })
-  moveDown(ctx, 30)
-
-  // 2. Customer block with blank lines
-  drawHeading(ctx, 'Kundendaten')
-  const customerFields = [
-    'Firma',
-    'Vorname / Nachname',
-    'Straße / Nr.',
-    'PLZ / Ort',
-    'E-Mail',
-    'Telefon',
-    'Kd.-Nr.',
-  ]
-  for (const field of customerFields) {
-    drawText(ctx, `${field}: `, ctx.margin, { size: 9 })
-    drawText(ctx, '________________________________________', ctx.margin + 100, { size: 9 })
-    moveDown(ctx)
-  }
-  moveDown(ctx, 16)
-
-  // 3. Option groups
-  const groups = category
-    ? catalog.option_groups
-        .filter((g) => g.applicable_categories.includes(category))
-        .sort((a, b) => a.sort_order - b.sort_order)
-    : catalog.option_groups.sort((a, b) => a.sort_order - b.sort_order)
-
-  for (const group of groups) {
-    checkPageBreak(ctx, 40)
-    drawHeading(ctx, group.name)
-
-    const items = getOptionItemsForGroup(catalog, group.id)
-    for (const item of items) {
-      checkPageBreak(ctx, 18)
-      const sku = getSkuByCode(catalog, item.sku_code)
-      if (!sku) continue
-
-      // Checkbox
-      drawText(ctx, '[  ]', ctx.margin, { size: 10 })
-      drawText(ctx, sku.name, ctx.margin + 30, { size: 9 })
-      drawText(ctx, `Art.-Nr.: ${sku.article_no}`, ctx.margin + 250, { size: 8 })
-      drawTextRight(
-        ctx,
-        sku.price_net > 0 ? formatCurrencyPdf(sku.price_net) : 'Inkl.',
-        rightEdge,
-        { size: 9 },
-      )
-      moveDown(ctx)
-    }
-    moveDown(ctx, 8)
-  }
-
-  // 4. Empty summary block
-  checkPageBreak(ctx, 80)
-  moveDown(ctx, 16)
-  drawLine(ctx, ctx.margin, rightEdge)
-
-  const summaryX = rightEdge - 200
-  drawText(ctx, 'Netto:', summaryX, { size: 10 })
-  drawText(ctx, '____________________', summaryX + 80, { size: 10 })
-  moveDown(ctx, 20)
-  drawText(ctx, 'MwSt. 19%:', summaryX, { size: 10 })
-  drawText(ctx, '____________________', summaryX + 80, { size: 10 })
-  moveDown(ctx, 8)
-  drawLine(ctx, summaryX, rightEdge)
-  drawText(ctx, 'Brutto:', summaryX, { size: 12, bold: true })
-  drawText(ctx, '____________________', summaryX + 80, { size: 12 })
-  moveDown(ctx, 30)
-
-  // 5. Notes
-  checkPageBreak(ctx, 40)
-  drawText(ctx, 'Bemerkungen:', ctx.margin, { size: 9 })
-  moveDown(ctx, 4)
-  for (let i = 0; i < 3; i++) {
-    drawText(ctx, '________________________________________________________________________', ctx.margin, { size: 9 })
-    moveDown(ctx)
   }
 
   return ctx.doc.save()

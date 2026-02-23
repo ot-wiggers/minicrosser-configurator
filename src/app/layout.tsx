@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { TopBar } from '@/components/layout/top-bar'
 import { OutboxProcessor } from '@/components/layout/outbox-processor'
+import { CatalogProvider } from '@/components/layout/catalog-provider'
 import { Toaster } from 'sonner'
 
 const geistSans = Geist({
@@ -32,9 +33,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="de">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <TopBar />
-        <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
-        <OutboxProcessor />
+        <CatalogProvider>
+          <TopBar />
+          <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
+          <OutboxProcessor />
+        </CatalogProvider>
         <Toaster richColors position="top-right" />
       </body>
     </html>

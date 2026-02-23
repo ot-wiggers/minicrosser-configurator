@@ -1,36 +1,69 @@
 'use client'
 
+import { useEffect, useMemo } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useConfiguratorStore } from '@/modules/configurator'
-import {
-  loadCatalog,
-  getOptionGroupsForCategory,
-  getOptionItemsForGroup,
-  getSkuByCode,
-} from '@/modules/catalog'
-import type { OptionGroup, OptionItem } from '@/modules/catalog/types'
+import { db } from '@/modules/storage/db'
+import type { OptionGroupRecord, OptionRecord } from '@/modules/catalog/db-types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { cn, formatCurrency } from '@/lib/utils'
 import { Check, Circle } from 'lucide-react'
 
+function useOptionImageUrls(
+  groupsWithOptions: { group: OptionGroupRecord; items: OptionRecord[] }[] | undefined,
+) {
+  const urlMap = useMemo(() => {
+    const map = new Map<string, string>()
+    if (!groupsWithOptions) return map
+    for (const { items } of groupsWithOptions) {
+      for (const item of items) {
+        if (item.imageBlob) {
+          map.set(item.id, URL.createObjectURL(item.imageBlob))
+        }
+      }
+    }
+    return map
+  }, [groupsWithOptions])
+
+  useEffect(() => {
+    return () => {
+      for (const url of urlMap.values()) {
+        URL.revokeObjectURL(url)
+      }
+    }
+  }, [urlMap])
+
+  return urlMap
+}
+
+function OptionThumbnail({ url }: { url?: string }) {
+  if (!url) return null
+  return (
+    <img
+      src={url}
+      alt=""
+      className="h-12 w-12 shrink-0 rounded-md border object-cover"
+    />
+  )
+}
+
 function SingleGroup({
   group,
   items,
+  imageUrls,
 }: {
-  group: OptionGroup
-  items: OptionItem[]
+  group: OptionGroupRecord
+  items: OptionRecord[]
+  imageUrls: Map<string, string>
 }) {
   const { selectedOptions, toggleOption, removeOption } = useConfiguratorStore()
-  const catalog = loadCatalog()
 
   // Find current selection for this group
   const currentSelection = items.find((item) => selectedOptions[item.id])
 
-  function handleSelect(item: OptionItem) {
-    const sku = getSkuByCode(catalog, item.sku_code)
-    if (!sku) return
-
+  function handleSelect(item: OptionRecord) {
     // For SINGLE groups: deselect current, select new
     if (currentSelection && currentSelection.id !== item.id) {
       removeOption(currentSelection.id)
@@ -41,7 +74,7 @@ function SingleGroup({
     } else {
       toggleOption({
         optionItemId: item.id,
-        skuCode: item.sku_code,
+        skuCode: item.skuCode,
         quantity: 1,
       })
     }
@@ -52,8 +85,6 @@ function SingleGroup({
       <h3 className="mb-3 text-lg font-semibold">{group.name}</h3>
       <div className="space-y-2">
         {items.map((item) => {
-          const sku = getSkuByCode(catalog, item.sku_code)
-          if (!sku) return null
           const isSelected = !!selectedOptions[item.id]
           return (
             <Card
@@ -73,14 +104,15 @@ function SingleGroup({
                 >
                   {isSelected && <Circle className="h-2 w-2 fill-white text-white" />}
                 </div>
+                <OptionThumbnail url={imageUrls.get(item.id)} />
                 <div className="flex-1">
-                  <p className="font-medium">{sku.name}</p>
-                  {sku.description && (
-                    <p className="text-sm text-muted-foreground">{sku.description}</p>
+                  <p className="font-medium">{item.name}</p>
+                  {item.description && (
+                    <p className="text-sm text-muted-foreground">{item.description}</p>
                   )}
                 </div>
                 <p className="font-semibold">
-                  {sku.price_net > 0 ? formatCurrency(sku.price_net) : 'Inklusive'}
+                  {item.priceNet > 0 ? formatCurrency(item.priceNet) : 'Inklusive'}
                 </p>
               </CardContent>
             </Card>
@@ -94,19 +126,18 @@ function SingleGroup({
 function MultiGroup({
   group,
   items,
+  imageUrls,
 }: {
-  group: OptionGroup
-  items: OptionItem[]
+  group: OptionGroupRecord
+  items: OptionRecord[]
+  imageUrls: Map<string, string>
 }) {
   const { selectedOptions, toggleOption, setOptionQuantity } = useConfiguratorStore()
-  const catalog = loadCatalog()
 
-  function handleToggle(item: OptionItem) {
-    const sku = getSkuByCode(catalog, item.sku_code)
-    if (!sku) return
+  function handleToggle(item: OptionRecord) {
     toggleOption({
       optionItemId: item.id,
-      skuCode: item.sku_code,
+      skuCode: item.skuCode,
       quantity: 1,
     })
   }
@@ -116,10 +147,7 @@ function MultiGroup({
       <h3 className="mb-3 text-lg font-semibold">{group.name}</h3>
       <div className="space-y-2">
         {items.map((item) => {
-          const sku = getSkuByCode(catalog, item.sku_code)
-          if (!sku) return null
           const isSelected = !!selectedOptions[item.id]
-          const isQty = group.selection_type === 'QTY'
           return (
             <Card
               key={item.id}
@@ -138,13 +166,14 @@ function MultiGroup({
                 >
                   {isSelected && <Check className="h-3 w-3 text-white" />}
                 </div>
+                <OptionThumbnail url={imageUrls.get(item.id)} />
                 <div className="flex-1">
-                  <p className="font-medium">{sku.name}</p>
-                  {sku.description && (
-                    <p className="text-sm text-muted-foreground">{sku.description}</p>
+                  <p className="font-medium">{item.name}</p>
+                  {item.description && (
+                    <p className="text-sm text-muted-foreground">{item.description}</p>
                   )}
                 </div>
-                {isQty && isSelected && (
+                {isSelected && (
                   <Input
                     type="number"
                     min={1}
@@ -154,7 +183,7 @@ function MultiGroup({
                     className="w-20"
                   />
                 )}
-                <p className="font-semibold">{formatCurrency(sku.price_net)}</p>
+                <p className="font-semibold">{formatCurrency(item.priceNet)}</p>
               </CardContent>
             </Card>
           )
@@ -166,30 +195,48 @@ function MultiGroup({
 
 export function AccessoryPicker() {
   const { selectedCategory } = useConfiguratorStore()
-  const catalog = loadCatalog()
 
-  if (!selectedCategory) return null
+  const groupsWithOptions = useLiveQuery(
+    async () => {
+      if (!selectedCategory) return []
+      const categoryId = selectedCategory.toLowerCase()
+      const allGroups = await db.optionGroups.orderBy('sortOrder').toArray()
+      const applicableGroups = allGroups.filter(
+        (g) => g.isActive && (g.appliesTo.length === 0 || g.appliesTo.includes(categoryId)),
+      )
 
-  const groups = getOptionGroupsForCategory(catalog, selectedCategory)
+      const result: { group: OptionGroupRecord; items: OptionRecord[] }[] = []
+      for (const group of applicableGroups) {
+        const items = await db.options
+          .where('optionGroupId')
+          .equals(group.id)
+          .sortBy('sortOrder')
+        result.push({ group, items: items.filter((o) => o.isActive) })
+      }
+      return result
+    },
+    [selectedCategory],
+  )
+
+  const imageUrls = useOptionImageUrls(groupsWithOptions)
+
+  if (!selectedCategory || !groupsWithOptions) return null
 
   return (
     <div>
       <h2 className="mb-2 text-xl font-semibold">Zubehör & Optionen</h2>
       <p className="mb-6 text-muted-foreground">Passen Sie Ihr Fahrzeug individuell an</p>
       <div className="space-y-6">
-        {groups.map((group, idx) => {
-          const items = getOptionItemsForGroup(catalog, group.id)
-          return (
-            <div key={group.id}>
-              {idx > 0 && <Separator className="mb-6" />}
-              {group.selection_type === 'SINGLE' ? (
-                <SingleGroup group={group} items={items} />
-              ) : (
-                <MultiGroup group={group} items={items} />
-              )}
-            </div>
-          )
-        })}
+        {groupsWithOptions.map(({ group, items }, idx) => (
+          <div key={group.id}>
+            {idx > 0 && <Separator className="mb-6" />}
+            {group.selectionType === 'SINGLE' ? (
+              <SingleGroup group={group} items={items} imageUrls={imageUrls} />
+            ) : (
+              <MultiGroup group={group} items={items} imageUrls={imageUrls} />
+            )}
+          </div>
+        ))}
       </div>
     </div>
   )

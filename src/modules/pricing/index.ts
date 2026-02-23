@@ -1,1 +1,1 @@
-export { calculatePricing } from './calc'
+export { calculatePricingFromItems, calculatePricingAsync } from './calc'
