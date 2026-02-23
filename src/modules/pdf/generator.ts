@@ -6,7 +6,6 @@ import {
   moveDown,
   drawLine,
   drawHeading,
-  checkPageBreak,
   formatCurrencyPdf,
   newPage,
 } from './helpers'

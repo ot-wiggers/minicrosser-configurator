@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/modules/storage/db'
 import { optionGroupRepo } from '@/modules/storage'
-import type { OptionGroupRecord, CategoryRecord } from '@/modules/catalog/db-types'
+import type { OptionGroupRecord } from '@/modules/catalog/db-types'
 import { OptionGroupForm } from '@/components/admin/option-group-form'
 import {
   Table,
