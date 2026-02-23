@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { DocumentList } from '@/components/documents/document-list'
+import { BlankPdfButtons } from '@/components/dashboard/blank-pdf-buttons'
 import { useConfiguratorStore } from '@/modules/configurator'
 import { FilePlus2, ShoppingCart } from 'lucide-react'
 
@@ -36,6 +37,11 @@ export default function DashboardPage() {
             Neue Bestellung
           </Button>
         </Link>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="mb-4 text-xl font-semibold">Blanko-Formulare</h2>
+        <BlankPdfButtons />
       </div>
 
       <div>

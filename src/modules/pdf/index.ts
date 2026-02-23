@@ -1,1 +1,1 @@
-export { generateDocumentPdf, generateBlankFormPdf } from './generator'
+export { generateDocumentPdf } from './generator'
