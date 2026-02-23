@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useConfiguratorStore } from '@/modules/configurator'
-import { loadCatalog, getSkuForBaseModel } from '@/modules/catalog'
-import { calculatePricing } from '@/modules/pricing'
+import { calculatePricingAsync } from '@/modules/pricing'
 import { documentRepo, sequenceRepo } from '@/modules/storage'
 import type { CustomerData } from '@/modules/storage/types'
 import {
@@ -105,12 +104,10 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
 
     setSaving(true)
     try {
-      const catalog = loadCatalog()
-      const baseSku = getSkuForBaseModel(catalog, selectedBaseModelId)
-      if (!baseSku) throw new Error('Base SKU not found')
-
       const optionsArray = Object.values(selectedOptions)
-      const pricing = calculatePricing(baseSku, optionsArray, catalog)
+      const pricing = await calculatePricingAsync(selectedBaseModelId, optionsArray)
+      if (!pricing) throw new Error('Pricing calculation failed')
+
       const documentNo = await sequenceRepo.getNextNumber()
       const now = new Date().toISOString()
 

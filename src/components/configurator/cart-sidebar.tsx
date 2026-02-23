@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useConfiguratorStore } from '@/modules/configurator'
-import { loadCatalog, getSkuForBaseModel } from '@/modules/catalog'
-import { calculatePricing } from '@/modules/pricing'
+import { db } from '@/modules/storage/db'
+import { calculatePricingFromItems } from '@/modules/pricing'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
@@ -16,18 +16,40 @@ interface CartSidebarProps {
 
 export function CartSidebar({ onCreateDocument }: CartSidebarProps) {
   const { documentType, selectedBaseModelId, selectedOptions } = useConfiguratorStore()
-  const catalog = loadCatalog()
 
-  const baseSku = selectedBaseModelId
-    ? getSkuForBaseModel(catalog, selectedBaseModelId)
-    : undefined
+  const pricing = useLiveQuery(
+    async () => {
+      if (!selectedBaseModelId) return null
+      const baseModel = await db.baseModels.get(selectedBaseModelId)
+      if (!baseModel) return null
 
-  const pricing = useMemo(() => {
-    if (!baseSku) return null
-    return calculatePricing(baseSku, Object.values(selectedOptions), catalog)
-  }, [baseSku, selectedOptions, catalog])
+      const optionItems: Array<{
+        skuCode: string
+        articleNo: string
+        name: string
+        priceNet: number
+        quantity: number
+      }> = []
 
-  if (!baseSku || !pricing) {
+      for (const opt of Object.values(selectedOptions)) {
+        const option = await db.options.where('skuCode').equals(opt.skuCode).first()
+        if (option) {
+          optionItems.push({
+            skuCode: option.skuCode,
+            articleNo: option.articleNo,
+            name: option.name,
+            priceNet: option.priceNet,
+            quantity: opt.quantity || 1,
+          })
+        }
+      }
+
+      return calculatePricingFromItems(baseModel, optionItems)
+    },
+    [selectedBaseModelId, selectedOptions],
+  )
+
+  if (!pricing) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center p-8 text-muted-foreground">
