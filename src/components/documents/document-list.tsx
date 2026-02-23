@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { documentRepo } from '@/modules/storage'
-import type { DocumentRecord } from '@/modules/storage/types'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -28,20 +28,20 @@ const typeLabel: Record<string, string> = {
 }
 
 export function DocumentList() {
-  const [documents, setDocuments] = useState<DocumentRecord[]>([])
   const [searchQuery, setSearchQuery] = useState('')
 
-  const loadDocuments = useCallback(async () => {
-    const docs = searchQuery
-      ? await documentRepo.search(searchQuery)
-      : await documentRepo.getAll()
-    setDocuments(docs)
-  }, [searchQuery])
+  // Use either search or list query depending on search input
+  const allDocuments = useQuery(api.documents.list)
+  const searchResults = useQuery(
+    api.documents.search,
+    searchQuery.trim() ? { query: searchQuery.trim() } : 'skip',
+  )
 
-  useEffect(() => {
-    const timeout = setTimeout(loadDocuments, 0)
-    return () => clearTimeout(timeout)
-  }, [loadDocuments])
+  const documents = useMemo(() => {
+    if (searchQuery.trim() && searchResults) return searchResults as any[]
+    if (!searchQuery.trim() && allDocuments) return allDocuments as any[]
+    return []
+  }, [searchQuery, searchResults, allDocuments])
 
   return (
     <div className="space-y-4">
@@ -62,25 +62,27 @@ export function DocumentList() {
         </div>
       ) : (
         <div className="space-y-2">
-          {documents.map((doc) => (
-            <Link key={doc.id} href={`/documents/${doc.id}`}>
+          {documents.map((doc: any) => (
+            <Link key={doc._id} href={`/documents/${doc._id}`}>
               <Card className="transition-colors hover:bg-muted/50">
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-medium">{doc.document_no}</span>
+                      <span className="font-mono font-medium">{doc.documentNo}</span>
                       <Badge variant={statusVariant[doc.status]}>
                         {statusLabel[doc.status]}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {typeLabel[doc.document_type]} &middot; {doc.customer.company} &middot;{' '}
+                      {typeLabel[doc.documentType]} &middot; {doc.customer.company} &middot;{' '}
                       {doc.customer.lastName}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">{formatCurrency(doc.pricing.totalGross)}</p>
-                    <p className="text-sm text-muted-foreground">{formatDate(doc.created_at)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(doc._creationTime)}
+                    </p>
                   </div>
                 </CardContent>
               </Card>

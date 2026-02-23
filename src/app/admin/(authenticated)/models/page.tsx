@@ -1,10 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/modules/storage/db'
-import { baseModelRepo } from '@/modules/storage'
-import type { BaseModelRecord } from '@/modules/catalog/db-types'
+import { useState, useMemo } from 'react'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../../../convex/_generated/api'
 import { ModelForm } from '@/components/admin/model-form'
 import {
   Select,
@@ -28,76 +26,46 @@ import { Plus, Pencil, Trash2, Car } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 export default function ModelsPage() {
-  const modelsRaw = useLiveQuery(() => db.baseModels.orderBy('sortOrder').toArray())
+  const modelsRaw = useQuery(api.baseModels.list)
   const models = useMemo(() => modelsRaw ?? [], [modelsRaw])
-  const categoriesRaw = useLiveQuery(() => db.categories.orderBy('sortOrder').toArray())
+  const categoriesRaw = useQuery(api.categories.list)
   const categories = useMemo(() => categoriesRaw ?? [], [categoriesRaw])
 
+  const removeModel = useMutation(api.baseModels.remove)
+
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [editModel, setEditModel] = useState<BaseModelRecord | undefined>()
+  const [editModelId, setEditModelId] = useState<string | undefined>()
   const [filterCategoryId, setFilterCategoryId] = useState<string>('all')
 
   // Build a lookup map: categoryId -> category name
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>()
-    for (const cat of categories) {
-      map.set(cat.id, cat.name)
+    for (const cat of categories as any[]) {
+      map.set(cat._id, cat.name)
     }
     return map
   }, [categories])
 
-  // Image preview URLs (managed with cleanup)
-  const [imagePreviews, setImagePreviews] = useState<Map<string, string>>(new Map())
-
-  useEffect(() => {
-    const newPreviews = new Map<string, string>()
-    for (const m of models) {
-      if (m.imageBlob) {
-        const existing = imagePreviews.get(m.id)
-        // Reuse existing URL if the blob reference hasn't changed
-        if (existing) {
-          newPreviews.set(m.id, existing)
-        } else {
-          newPreviews.set(m.id, URL.createObjectURL(m.imageBlob))
-        }
-      }
-    }
-    // Revoke URLs that are no longer needed
-    for (const [id, url] of imagePreviews) {
-      if (!newPreviews.has(id) || newPreviews.get(id) !== url) {
-        URL.revokeObjectURL(url)
-      }
-    }
-    setImagePreviews(newPreviews)
-
-    return () => {
-      for (const url of newPreviews.values()) {
-        URL.revokeObjectURL(url)
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [models])
-
   const filteredModels = useMemo(() => {
     if (filterCategoryId === 'all') return models
-    return models.filter((m) => m.categoryId === filterCategoryId)
+    return (models as any[]).filter((m: any) => m.categoryId === filterCategoryId)
   }, [models, filterCategoryId])
 
   function handleNew() {
-    setEditModel(undefined)
+    setEditModelId(undefined)
     setSheetOpen(true)
   }
 
-  function handleEdit(model: BaseModelRecord) {
-    setEditModel(model)
+  function handleEdit(modelId: string) {
+    setEditModelId(modelId)
     setSheetOpen(true)
   }
 
-  async function handleDelete(model: BaseModelRecord) {
+  async function handleDelete(model: any) {
     if (!confirm(`Modell "${model.name}" wirklich loschen?`)) return
 
     try {
-      await baseModelRepo.delete(model.id)
+      await removeModel({ id: model._id })
       toast.success('Modell geloscht.')
     } catch {
       toast.error('Fehler beim Loschen.')
@@ -122,8 +90,8 @@ export default function ModelsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle Kategorien</SelectItem>
-            {categories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>
+            {(categories as any[]).map((cat: any) => (
+              <SelectItem key={cat._id} value={cat._id}>
                 {cat.name}
               </SelectItem>
             ))}
@@ -155,12 +123,12 @@ export default function ModelsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredModels.map((model) => (
-                <TableRow key={model.id}>
+              {(filteredModels as any[]).map((model: any) => (
+                <TableRow key={model._id}>
                   <TableCell>
-                    {imagePreviews.get(model.id) ? (
+                    {model.imageUrl ? (
                       <img
-                        src={imagePreviews.get(model.id)}
+                        src={model.imageUrl}
                         alt={model.name}
                         className="h-10 w-10 rounded object-cover"
                       />
@@ -181,7 +149,7 @@ export default function ModelsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(model)}>
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(model._id)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(model)}>
@@ -196,7 +164,7 @@ export default function ModelsPage() {
         </div>
       )}
 
-      <ModelForm open={sheetOpen} onOpenChange={setSheetOpen} model={editModel} />
+      <ModelForm open={sheetOpen} onOpenChange={setSheetOpen} modelId={editModelId} />
     </div>
   )
 }

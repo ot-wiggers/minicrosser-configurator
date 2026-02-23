@@ -32,7 +32,7 @@ function applyPageBranding(
   ctx: PDFContext,
   settings: CorporateSettings,
 ) {
-  drawAccentStripe(ctx.page, settings.pdfColorAccent, ctx.pageHeight)
+  drawAccentStripe(ctx.page, settings.pdfColorAccent, ctx.pageHeight, settings.pdfAccentStripeWidth)
   drawCorporateFooter(ctx.page, { regular: ctx.font }, settings, ctx.pageWidth)
 }
 

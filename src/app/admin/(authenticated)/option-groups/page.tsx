@@ -1,10 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/modules/storage/db'
-import { optionGroupRepo } from '@/modules/storage'
-import type { OptionGroupRecord } from '@/modules/catalog/db-types'
+import { useState, useMemo } from 'react'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../../../convex/_generated/api'
 import { OptionGroupForm } from '@/components/admin/option-group-form'
 import {
   Table,
@@ -21,27 +19,35 @@ import { Plus, Pencil, Trash2, Layers } from 'lucide-react'
 
 export default function OptionGroupsPage() {
   const [formOpen, setFormOpen] = useState(false)
-  const [editingGroup, setEditingGroup] = useState<OptionGroupRecord | undefined>(undefined)
+  const [editingGroupId, setEditingGroupId] = useState<string | undefined>(undefined)
 
-  const groups = useLiveQuery(() => db.optionGroups.orderBy('sortOrder').toArray())
-  const categories = useLiveQuery(() => db.categories.orderBy('sortOrder').toArray())
-  const options = useLiveQuery(() => db.options.toArray())
+  const groups = useQuery(api.optionGroups.list)
+  const categories = useQuery(api.categories.list)
+  const options = useQuery(api.options.list)
+  const removeGroup = useMutation(api.optionGroups.remove)
+  const removeOption = useMutation(api.options.remove)
 
   // Build a map of category id -> name for display
-  const categoryMap = new Map<string, string>()
-  if (categories) {
-    for (const cat of categories) {
-      categoryMap.set(cat.id, cat.name)
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>()
+    if (categories) {
+      for (const cat of categories as any[]) {
+        map.set(cat._id, cat.name)
+      }
     }
-  }
+    return map
+  }, [categories])
 
   // Count options per group
-  const optionCountMap = new Map<string, number>()
-  if (options) {
-    for (const opt of options) {
-      optionCountMap.set(opt.optionGroupId, (optionCountMap.get(opt.optionGroupId) ?? 0) + 1)
+  const optionCountMap = useMemo(() => {
+    const map = new Map<string, number>()
+    if (options) {
+      for (const opt of options as any[]) {
+        map.set(opt.optionGroupId, (map.get(opt.optionGroupId) ?? 0) + 1)
+      }
     }
-  }
+    return map
+  }, [options])
 
   function getCategoryNames(appliesTo: string[]): string {
     if (appliesTo.length === 0) return 'Alle'
@@ -51,17 +57,17 @@ export default function OptionGroupsPage() {
   }
 
   function handleCreate() {
-    setEditingGroup(undefined)
+    setEditingGroupId(undefined)
     setFormOpen(true)
   }
 
-  function handleEdit(group: OptionGroupRecord) {
-    setEditingGroup(group)
+  function handleEdit(groupId: string) {
+    setEditingGroupId(groupId)
     setFormOpen(true)
   }
 
-  async function handleDelete(group: OptionGroupRecord) {
-    const optionCount = optionCountMap.get(group.id) ?? 0
+  async function handleDelete(group: any) {
+    const optionCount = optionCountMap.get(group._id) ?? 0
     const message = optionCount > 0
       ? `"${group.name}" hat ${optionCount} Option(en). Trotzdem löschen?`
       : `"${group.name}" wirklich löschen?`
@@ -70,13 +76,13 @@ export default function OptionGroupsPage() {
 
     try {
       // Delete associated options first
-      if (optionCount > 0) {
-        const groupOptions = options?.filter((o) => o.optionGroupId === group.id) ?? []
+      if (optionCount > 0 && options) {
+        const groupOptions = (options as any[]).filter((o: any) => o.optionGroupId === group._id)
         for (const opt of groupOptions) {
-          await db.options.delete(opt.id)
+          await removeOption({ id: opt._id })
         }
       }
-      await optionGroupRepo.delete(group.id)
+      await removeGroup({ id: group._id })
       toast.success('Optionsgruppe gelöscht.')
     } catch (err) {
       console.error('Failed to delete option group:', err)
@@ -125,8 +131,8 @@ export default function OptionGroupsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {groups.map((group) => (
-              <TableRow key={group.id}>
+            {(groups as any[]).map((group: any) => (
+              <TableRow key={group._id}>
                 <TableCell className="font-medium">{group.name}</TableCell>
                 <TableCell>
                   <Badge variant={group.selectionType === 'SINGLE' ? 'default' : 'secondary'}>
@@ -137,7 +143,7 @@ export default function OptionGroupsPage() {
                   {getCategoryNames(group.appliesTo)}
                 </TableCell>
                 <TableCell className="text-center">
-                  {optionCountMap.get(group.id) ?? 0}
+                  {optionCountMap.get(group._id) ?? 0}
                 </TableCell>
                 <TableCell>{group.sortOrder}</TableCell>
                 <TableCell>
@@ -150,7 +156,7 @@ export default function OptionGroupsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleEdit(group)}
+                      onClick={() => handleEdit(group._id)}
                       title="Bearbeiten"
                     >
                       <Pencil className="h-4 w-4" />
@@ -174,7 +180,7 @@ export default function OptionGroupsPage() {
       <OptionGroupForm
         open={formOpen}
         onOpenChange={setFormOpen}
-        group={editingGroup}
+        groupId={editingGroupId}
       />
     </div>
   )

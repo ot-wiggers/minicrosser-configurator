@@ -1,10 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/modules/storage/db'
-import { categoryRepo } from '@/modules/storage'
-import type { CategoryRecord } from '@/modules/catalog/db-types'
+import { useState } from 'react'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../../../convex/_generated/api'
 import { CategoryForm } from '@/components/admin/category-form'
 import {
   Table,
@@ -19,56 +17,31 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, FolderOpen } from 'lucide-react'
 
-/** Hook that creates and manages Blob URLs for a list of categories. */
-function useCategoryImageUrls(categories: CategoryRecord[] | undefined) {
-  const imageUrls = useMemo(() => {
-    const map = new Map<string, string>()
-    if (!categories) return map
-    for (const cat of categories) {
-      if (cat.imageBlob) {
-        map.set(cat.id, URL.createObjectURL(cat.imageBlob))
-      }
-    }
-    return map
-  }, [categories])
-
-  // Revoke old URLs when the map changes or on unmount
-  useEffect(() => {
-    return () => {
-      for (const url of imageUrls.values()) {
-        URL.revokeObjectURL(url)
-      }
-    }
-  }, [imageUrls])
-
-  return imageUrls
-}
-
 export default function CategoriesPage() {
-  const categories = useLiveQuery(() => db.categories.orderBy('sortOrder').toArray())
-  const imageUrls = useCategoryImageUrls(categories)
+  const categories = useQuery(api.categories.list)
+  const removeCategory = useMutation(api.categories.remove)
 
   const [formOpen, setFormOpen] = useState(false)
-  const [editCategory, setEditCategory] = useState<CategoryRecord | undefined>(undefined)
+  const [editCategoryId, setEditCategoryId] = useState<string | undefined>(undefined)
 
   function handleCreate() {
-    setEditCategory(undefined)
+    setEditCategoryId(undefined)
     setFormOpen(true)
   }
 
-  function handleEdit(category: CategoryRecord) {
-    setEditCategory(category)
+  function handleEdit(categoryId: string) {
+    setEditCategoryId(categoryId)
     setFormOpen(true)
   }
 
-  async function handleDelete(category: CategoryRecord) {
+  async function handleDelete(cat: any) {
     const confirmed = window.confirm(
-      `Kategorie "${category.name}" wirklich loeschen? Dieser Vorgang kann nicht rueckgaengig gemacht werden.`,
+      `Kategorie "${cat.name}" wirklich loeschen? Dieser Vorgang kann nicht rueckgaengig gemacht werden.`,
     )
     if (!confirmed) return
 
     try {
-      await categoryRepo.delete(category.id)
+      await removeCategory({ id: cat._id })
       toast.success('Kategorie geloescht.')
     } catch (err) {
       console.error('Failed to delete category:', err)
@@ -110,54 +83,51 @@ export default function CategoriesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {categories.map((category) => {
-                const imgUrl = imageUrls.get(category.id)
-                return (
-                  <TableRow key={category.id}>
-                    <TableCell>
-                      {imgUrl ? (
-                        <img
-                          src={imgUrl}
-                          alt={category.name}
-                          className="h-12 w-12 rounded-md border object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-md border bg-muted">
-                          <FolderOpen className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell>{category.sortOrder}</TableCell>
-                    <TableCell>
-                      <Badge variant={category.isActive ? 'default' : 'secondary'}>
-                        {category.isActive ? 'Aktiv' : 'Inaktiv'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(category)}
-                          title="Bearbeiten"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(category)}
-                          title="Loeschen"
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+              {categories.map((category: any) => (
+                <TableRow key={category._id}>
+                  <TableCell>
+                    {category.imageUrl ? (
+                      <img
+                        src={category.imageUrl}
+                        alt={category.name}
+                        className="h-12 w-12 rounded-md border object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-md border bg-muted">
+                        <FolderOpen className="h-5 w-5 text-muted-foreground" />
                       </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">{category.name}</TableCell>
+                  <TableCell>{category.sortOrder}</TableCell>
+                  <TableCell>
+                    <Badge variant={category.isActive ? 'default' : 'secondary'}>
+                      {category.isActive ? 'Aktiv' : 'Inaktiv'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(category._id)}
+                        title="Bearbeiten"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(category)}
+                        title="Loeschen"
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>
@@ -166,7 +136,7 @@ export default function CategoriesPage() {
       <CategoryForm
         open={formOpen}
         onOpenChange={setFormOpen}
-        category={editCategory}
+        categoryId={editCategoryId}
       />
     </div>
   )

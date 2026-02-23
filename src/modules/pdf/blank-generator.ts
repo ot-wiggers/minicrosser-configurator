@@ -1,5 +1,4 @@
 import { rgb } from 'pdf-lib'
-import { db } from '@/modules/storage/db'
 import {
   createContext,
   drawText,
@@ -19,8 +18,47 @@ import {
 } from './corporate'
 import type { PDFContext } from './helpers'
 
+/** Data shape for base models used in blank PDF generation */
+export interface BlankPdfBaseModel {
+  articleNo: string
+  name: string
+  priceNet: number
+  priceGross: number
+  isActive: boolean
+  sortOrder: number
+}
+
+/** Data shape for option groups used in blank PDF generation */
+export interface BlankPdfOptionGroup {
+  _id: string
+  name: string
+  selectionType: string
+  isActive: boolean
+  sortOrder: number
+  appliesTo: string[]
+}
+
+/** Data shape for options used in blank PDF generation */
+export interface BlankPdfOption {
+  optionGroupId: string
+  articleNo: string
+  name: string
+  priceNet: number
+  priceGross: number
+  isDefault: boolean
+  isActive: boolean
+  sortOrder: number
+}
+
+/** All catalog data needed to generate a blank form PDF */
+export interface BlankPdfCatalogData {
+  baseModels: BlankPdfBaseModel[]
+  optionGroups: BlankPdfOptionGroup[]
+  options: BlankPdfOption[]
+}
+
 function applyPageBranding(ctx: PDFContext, settings: CorporateSettings) {
-  drawAccentStripe(ctx.page, settings.pdfColorAccent, ctx.pageHeight)
+  drawAccentStripe(ctx.page, settings.pdfColorAccent, ctx.pageHeight, settings.pdfAccentStripeWidth)
   drawCorporateFooter(ctx.page, { regular: ctx.font }, settings, ctx.pageWidth)
 }
 
@@ -80,7 +118,15 @@ function drawSectionHeader(
   moveDown(ctx, 24)
 }
 
-export async function generateBlankFormPdf(categoryId: string): Promise<Uint8Array> {
+/**
+ * Generates a blank order form PDF for a given category.
+ * Catalog data (base models, option groups, options) must be passed in
+ * from Convex queries — no Dexie dependency.
+ */
+export async function generateBlankFormPdf(
+  categoryId: string,
+  catalogData: BlankPdfCatalogData,
+): Promise<Uint8Array> {
   const ctx = await createContext()
   const settings = await loadCorporateSettings()
   const rightEdge = ctx.pageWidth - ctx.margin
@@ -101,7 +147,7 @@ export async function generateBlankFormPdf(categoryId: string): Promise<Uint8Arr
     'Kunden-Nr.',
     'Ansprechpartner',
     'Firma',
-    'Straße / Nr.',
+    'Strasse / Nr.',
     'PLZ / Ort',
     'E-Mail',
     'Telefon',
@@ -128,12 +174,10 @@ export async function generateBlankFormPdf(categoryId: string): Promise<Uint8Arr
   moveDown(ctx, 4)
   drawLine(ctx, ctx.margin, rightEdge)
 
-  // Load base models for category
-  const baseModels = await db.baseModels
-    .where('categoryId')
-    .equals(categoryId)
-    .sortBy('sortOrder')
-  const activeModels = baseModels.filter((m) => m.isActive)
+  // Filter base models for this category
+  const activeModels = catalogData.baseModels
+    .filter((m) => m.isActive)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
 
   if (activeModels.length > 0) {
     drawSectionHeader(ctx, settings, 'BASISMODELLE', rightEdge)
@@ -164,25 +208,22 @@ export async function generateBlankFormPdf(categoryId: string): Promise<Uint8Arr
     moveDown(ctx, 4)
   }
 
-  // Load option groups for category
-  const allGroups = await db.optionGroups.orderBy('sortOrder').toArray()
-  const applicableGroups = allGroups.filter(
-    (g) => g.isActive && (g.appliesTo.length === 0 || g.appliesTo.includes(categoryId)),
-  )
+  // Filter option groups that apply to this category
+  const applicableGroups = catalogData.optionGroups
+    .filter((g) => g.isActive && (g.appliesTo.length === 0 || g.appliesTo.includes(categoryId)))
+    .sort((a, b) => a.sortOrder - b.sortOrder)
 
   for (const group of applicableGroups) {
-    const options = await db.options
-      .where('optionGroupId')
-      .equals(group.id)
-      .sortBy('sortOrder')
-    const activeOptions = options.filter((o) => o.isActive)
+    const groupOptions = catalogData.options
+      .filter((o) => o.optionGroupId === group._id && o.isActive)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
 
-    if (activeOptions.length === 0) continue
+    if (groupOptions.length === 0) continue
 
     drawSectionHeader(ctx, settings, group.name.toUpperCase(), rightEdge)
 
     let rowIdx = 0
-    for (const option of activeOptions) {
+    for (const option of groupOptions) {
       ensureSpace(ctx, settings, 16)
 
       // Alternating row background

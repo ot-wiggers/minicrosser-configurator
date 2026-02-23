@@ -2,10 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { useConfiguratorStore } from '@/modules/configurator'
-import { calculatePricingAsync } from '@/modules/pricing'
-import { documentRepo, sequenceRepo } from '@/modules/storage'
+import { calculatePricingFromItems } from '@/modules/pricing'
 import type { CustomerData } from '@/modules/storage/types'
+import { CustomerSearch } from '@/components/configurator/customer-search'
+import { ChangeNoteDialog } from '@/components/documents/change-note-dialog'
 import {
   Dialog,
   DialogContent,
@@ -17,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 
 interface CustomerFormDialogProps {
@@ -54,8 +58,31 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
     selectedCategory,
     selectedBaseModelId,
     selectedOptions,
+    editingDocumentId,
     reset,
   } = useConfiguratorStore()
+
+  const isEditing = !!editingDocumentId
+
+  const baseModel = useQuery(
+    api.baseModels.getById,
+    selectedBaseModelId ? { id: selectedBaseModelId as any } : 'skip',
+  )
+  // Load existing document data when editing
+  const existingDoc = useQuery(
+    api.documents.getById,
+    editingDocumentId ? { id: editingDocumentId as any } : 'skip',
+  )
+  const latestVersion = useQuery(
+    api.documentVersions.getLatestVersion,
+    editingDocumentId ? { documentId: editingDocumentId as any } : 'skip',
+  )
+
+  const getNextSequence = useMutation(api.sequences.getNext)
+  const createDocument = useMutation(api.documents.create)
+  const updateDocument = useMutation(api.documents.updateDocument)
+  const createVersion = useMutation(api.documentVersions.create)
+  const findOrCreateCustomer = useMutation(api.customers.findOrCreate)
 
   const [customer, setCustomer] = useState<CustomerData>({
     company: '',
@@ -72,6 +99,26 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
   const [notes, setNotes] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+  const [showChangeNote, setShowChangeNote] = useState(false)
+
+  // Pre-fill customer data from existing document when editing
+  const hasPreFilled = useState(false)
+  if (isEditing && existingDoc && !hasPreFilled[0] && open) {
+    setCustomer({
+      company: existingDoc.customer.company,
+      firstName: existingDoc.customer.firstName,
+      lastName: existingDoc.customer.lastName,
+      street: existingDoc.customer.street,
+      zip: existingDoc.customer.zip,
+      city: existingDoc.customer.city,
+      email: existingDoc.customer.email,
+      phone: existingDoc.customer.phone ?? '',
+      contactPerson: existingDoc.customer.contactPerson ?? '',
+      customerNumber: existingDoc.customer.customerNumber ?? '',
+    })
+    setNotes(existingDoc.notes ?? '')
+    hasPreFilled[1](true)
+  }
 
   function updateField(field: keyof CustomerData, value: string) {
     setCustomer((prev) => ({ ...prev, [field]: value }))
@@ -84,6 +131,11 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
     }
   }
 
+  function handleCustomerSelect(data: CustomerData) {
+    setCustomer(data)
+    setErrors({})
+  }
+
   function validate(): boolean {
     const newErrors: Record<string, string> = {}
     for (const field of requiredFields) {
@@ -92,37 +144,76 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
       }
     }
     if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
-      newErrors.email = 'Bitte gültige E-Mail-Adresse eingeben'
+      newErrors.email = 'Bitte gueltige E-Mail-Adresse eingeben'
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  async function handleSubmit() {
+  function handleSubmitClick() {
     if (!validate()) return
-    if (!selectedCategory || !selectedBaseModelId) return
+    if (isEditing) {
+      // Show change note dialog for edits
+      setShowChangeNote(true)
+    } else {
+      handleCreate()
+    }
+  }
+
+  async function handleCreate() {
+    if (!validate()) return
+    if (!selectedCategory || !selectedBaseModelId || !baseModel) return
 
     setSaving(true)
     try {
-      const optionsArray = Object.values(selectedOptions)
-      const pricing = await calculatePricingAsync(selectedBaseModelId, optionsArray)
-      if (!pricing) throw new Error('Pricing calculation failed')
+      const optionItems = Object.values(selectedOptions).map((opt) => ({
+        skuCode: opt.skuCode,
+        articleNo: opt.articleNo,
+        name: opt.name,
+        priceNet: opt.priceNet,
+        quantity: opt.quantity || 1,
+      }))
+      const pricing = calculatePricingFromItems(baseModel, optionItems)
 
-      const documentNo = await sequenceRepo.getNextNumber()
-      const now = new Date().toISOString()
+      const year = new Date().getFullYear()
+      const seqNum = await getNextSequence({ key: `doc-seq-${year}` })
+      const documentNo = `MC-${year}-${String(seqNum).padStart(6, '0')}`
 
-      const id = await documentRepo.create({
-        document_no: documentNo,
-        document_type: documentType,
+      const customerId = await findOrCreateCustomer({
+        company: customer.company.trim(),
+        firstName: customer.firstName.trim(),
+        lastName: customer.lastName.trim(),
+        street: customer.street.trim() || undefined,
+        zip: customer.zip.trim() || undefined,
+        city: customer.city.trim() || undefined,
+        email: customer.email.trim(),
+        phone: customer.phone?.trim() || undefined,
+        contactPerson: customer.contactPerson?.trim() || undefined,
+        customerNumber: customer.customerNumber?.trim() || undefined,
+      })
+
+      const id = await createDocument({
+        documentNo,
+        documentType,
         status: 'DRAFT',
-        customer,
+        customerId: customerId as any,
+        customer: {
+          company: customer.company.trim(),
+          firstName: customer.firstName.trim(),
+          lastName: customer.lastName.trim(),
+          street: customer.street.trim(),
+          zip: customer.zip.trim(),
+          city: customer.city.trim(),
+          email: customer.email.trim(),
+          phone: customer.phone?.trim() || undefined,
+          contactPerson: customer.contactPerson?.trim() || undefined,
+          customerNumber: customer.customerNumber?.trim() || undefined,
+        },
         pricing,
         selectedCategory,
         selectedBaseModelId,
-        selectedOptions: optionsArray,
-        notes: notes || undefined,
-        created_at: now,
-        updated_at: now,
+        selectedOptions: Object.values(selectedOptions),
+        notes: notes.trim() || undefined,
       })
 
       reset()
@@ -139,162 +230,263 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
     }
   }
 
-  const title =
-    documentType === 'QUOTE' ? 'Angebot erstellen' : 'Bestellung erstellen'
+  async function handleUpdate(changeNote: string) {
+    if (!validate()) return
+    if (!selectedCategory || !selectedBaseModelId || !baseModel || !editingDocumentId || !existingDoc) return
+
+    setSaving(true)
+    setShowChangeNote(false)
+    try {
+      const optionItems = Object.values(selectedOptions).map((opt) => ({
+        skuCode: opt.skuCode,
+        articleNo: opt.articleNo,
+        name: opt.name,
+        priceNet: opt.priceNet,
+        quantity: opt.quantity || 1,
+      }))
+      const pricing = calculatePricingFromItems(baseModel, optionItems)
+
+      // Create version snapshot of current document state
+      const nextVersionNumber = latestVersion ? (latestVersion as any).versionNumber + 1 : 1
+      await createVersion({
+        documentId: editingDocumentId as any,
+        versionNumber: nextVersionNumber,
+        snapshot: JSON.stringify(existingDoc),
+        changeNote: changeNote || undefined,
+      })
+
+      // Update customer record
+      const customerId = await findOrCreateCustomer({
+        company: customer.company.trim(),
+        firstName: customer.firstName.trim(),
+        lastName: customer.lastName.trim(),
+        street: customer.street.trim() || undefined,
+        zip: customer.zip.trim() || undefined,
+        city: customer.city.trim() || undefined,
+        email: customer.email.trim(),
+        phone: customer.phone?.trim() || undefined,
+        contactPerson: customer.contactPerson?.trim() || undefined,
+        customerNumber: customer.customerNumber?.trim() || undefined,
+      })
+
+      // Update the document
+      await updateDocument({
+        id: editingDocumentId as any,
+        customerId: customerId as any,
+        customer: {
+          company: customer.company.trim(),
+          firstName: customer.firstName.trim(),
+          lastName: customer.lastName.trim(),
+          street: customer.street.trim(),
+          zip: customer.zip.trim(),
+          city: customer.city.trim(),
+          email: customer.email.trim(),
+          phone: customer.phone?.trim() || undefined,
+          contactPerson: customer.contactPerson?.trim() || undefined,
+          customerNumber: customer.customerNumber?.trim() || undefined,
+        },
+        pricing,
+        selectedCategory,
+        selectedBaseModelId,
+        selectedOptions: Object.values(selectedOptions),
+        notes: notes.trim() || undefined,
+      })
+
+      reset()
+      onOpenChange(false)
+      toast.success('Dokument aktualisiert')
+      router.push(`/documents/${editingDocumentId}`)
+    } catch (err) {
+      toast.error('Fehler beim Aktualisieren')
+      console.error(err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const title = isEditing
+    ? 'Dokument aktualisieren'
+    : documentType === 'QUOTE'
+      ? 'Angebot erstellen'
+      : 'Bestellung erstellen'
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>Bitte Kundendaten eingeben</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>
+              {isEditing ? 'Kundendaten pruefen und aktualisieren' : 'Bitte Kundendaten eingeben'}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          {/* Required fields */}
-          <div className="grid gap-2">
-            <Label htmlFor="company">{fieldLabels.company} *</Label>
-            <Input
-              id="company"
-              value={customer.company}
-              onChange={(e) => updateField('company', e.target.value)}
-              className={errors.company ? 'border-destructive' : ''}
-            />
-            {errors.company && (
-              <p className="text-sm text-destructive">{errors.company}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 py-4">
+            {/* Customer Search */}
             <div className="grid gap-2">
-              <Label htmlFor="firstName">{fieldLabels.firstName} *</Label>
+              <Label>Bestehenden Kunden suchen</Label>
+              <CustomerSearch onSelect={handleCustomerSelect} />
+            </div>
+
+            <div className="relative">
+              <Separator />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-xs text-muted-foreground">
+                oder manuell eingeben
+              </span>
+            </div>
+
+            {/* Required fields */}
+            <div className="grid gap-2">
+              <Label htmlFor="company">{fieldLabels.company} *</Label>
               <Input
-                id="firstName"
-                value={customer.firstName}
-                onChange={(e) => updateField('firstName', e.target.value)}
-                className={errors.firstName ? 'border-destructive' : ''}
+                id="company"
+                value={customer.company}
+                onChange={(e) => updateField('company', e.target.value)}
+                className={errors.company ? 'border-destructive' : ''}
               />
-              {errors.firstName && (
-                <p className="text-sm text-destructive">{errors.firstName}</p>
+              {errors.company && (
+                <p className="text-sm text-destructive">{errors.company}</p>
               )}
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="firstName">{fieldLabels.firstName} *</Label>
+                <Input
+                  id="firstName"
+                  value={customer.firstName}
+                  onChange={(e) => updateField('firstName', e.target.value)}
+                  className={errors.firstName ? 'border-destructive' : ''}
+                />
+                {errors.firstName && (
+                  <p className="text-sm text-destructive">{errors.firstName}</p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="lastName">{fieldLabels.lastName} *</Label>
+                <Input
+                  id="lastName"
+                  value={customer.lastName}
+                  onChange={(e) => updateField('lastName', e.target.value)}
+                  className={errors.lastName ? 'border-destructive' : ''}
+                />
+                {errors.lastName && (
+                  <p className="text-sm text-destructive">{errors.lastName}</p>
+                )}
+              </div>
+            </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="lastName">{fieldLabels.lastName} *</Label>
+              <Label htmlFor="street">{fieldLabels.street} *</Label>
               <Input
-                id="lastName"
-                value={customer.lastName}
-                onChange={(e) => updateField('lastName', e.target.value)}
-                className={errors.lastName ? 'border-destructive' : ''}
+                id="street"
+                value={customer.street}
+                onChange={(e) => updateField('street', e.target.value)}
+                className={errors.street ? 'border-destructive' : ''}
               />
-              {errors.lastName && (
-                <p className="text-sm text-destructive">{errors.lastName}</p>
+              {errors.street && (
+                <p className="text-sm text-destructive">{errors.street}</p>
               )}
             </div>
-          </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="street">{fieldLabels.street} *</Label>
-            <Input
-              id="street"
-              value={customer.street}
-              onChange={(e) => updateField('street', e.target.value)}
-              className={errors.street ? 'border-destructive' : ''}
-            />
-            {errors.street && (
-              <p className="text-sm text-destructive">{errors.street}</p>
-            )}
-          </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="zip">{fieldLabels.zip} *</Label>
+                <Input
+                  id="zip"
+                  value={customer.zip}
+                  onChange={(e) => updateField('zip', e.target.value)}
+                  className={errors.zip ? 'border-destructive' : ''}
+                />
+                {errors.zip && (
+                  <p className="text-sm text-destructive">{errors.zip}</p>
+                )}
+              </div>
+              <div className="col-span-2 grid gap-2">
+                <Label htmlFor="city">{fieldLabels.city} *</Label>
+                <Input
+                  id="city"
+                  value={customer.city}
+                  onChange={(e) => updateField('city', e.target.value)}
+                  className={errors.city ? 'border-destructive' : ''}
+                />
+                {errors.city && (
+                  <p className="text-sm text-destructive">{errors.city}</p>
+                )}
+              </div>
+            </div>
 
-          <div className="grid grid-cols-3 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="zip">{fieldLabels.zip} *</Label>
+              <Label htmlFor="email">{fieldLabels.email} *</Label>
               <Input
-                id="zip"
-                value={customer.zip}
-                onChange={(e) => updateField('zip', e.target.value)}
-                className={errors.zip ? 'border-destructive' : ''}
+                id="email"
+                type="email"
+                value={customer.email}
+                onChange={(e) => updateField('email', e.target.value)}
+                className={errors.email ? 'border-destructive' : ''}
               />
-              {errors.zip && (
-                <p className="text-sm text-destructive">{errors.zip}</p>
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email}</p>
               )}
             </div>
-            <div className="col-span-2 grid gap-2">
-              <Label htmlFor="city">{fieldLabels.city} *</Label>
-              <Input
-                id="city"
-                value={customer.city}
-                onChange={(e) => updateField('city', e.target.value)}
-                className={errors.city ? 'border-destructive' : ''}
-              />
-              {errors.city && (
-                <p className="text-sm text-destructive">{errors.city}</p>
-              )}
+
+            {/* Optional fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="phone">{fieldLabels.phone}</Label>
+                <Input
+                  id="phone"
+                  value={customer.phone}
+                  onChange={(e) => updateField('phone', e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="customerNumber">{fieldLabels.customerNumber}</Label>
+                <Input
+                  id="customerNumber"
+                  value={customer.customerNumber}
+                  onChange={(e) => updateField('customerNumber', e.target.value)}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="email">{fieldLabels.email} *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={customer.email}
-              onChange={(e) => updateField('email', e.target.value)}
-              className={errors.email ? 'border-destructive' : ''}
-            />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email}</p>
-            )}
-          </div>
-
-          {/* Optional fields */}
-          <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="phone">{fieldLabels.phone}</Label>
+              <Label htmlFor="contactPerson">{fieldLabels.contactPerson}</Label>
               <Input
-                id="phone"
-                value={customer.phone}
-                onChange={(e) => updateField('phone', e.target.value)}
+                id="contactPerson"
+                value={customer.contactPerson}
+                onChange={(e) => updateField('contactPerson', e.target.value)}
               />
             </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="customerNumber">{fieldLabels.customerNumber}</Label>
-              <Input
-                id="customerNumber"
-                value={customer.customerNumber}
-                onChange={(e) => updateField('customerNumber', e.target.value)}
+              <Label htmlFor="notes">Bemerkungen</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
               />
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="contactPerson">{fieldLabels.contactPerson}</Label>
-            <Input
-              id="contactPerson"
-              value={customer.contactPerson}
-              onChange={(e) => updateField('contactPerson', e.target.value)}
-            />
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleSubmitClick} disabled={saving}>
+              {saving ? 'Speichert...' : title}
+            </Button>
           </div>
+        </DialogContent>
+      </Dialog>
 
-          <div className="grid gap-2">
-            <Label htmlFor="notes">Bemerkungen</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Abbrechen
-          </Button>
-          <Button onClick={handleSubmit} disabled={saving}>
-            {saving ? 'Speichert...' : title}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      <ChangeNoteDialog
+        open={showChangeNote}
+        onOpenChange={setShowChangeNote}
+        onConfirm={handleUpdate}
+        saving={saving}
+      />
+    </>
   )
 }

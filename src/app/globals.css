@@ -58,10 +58,10 @@
 
 :root {
   /* Brand tokens — change these to update the entire app */
-  --brand: oklch(0.638 0.179 46.5);            /* #E8731A - bold orange */
+  --brand: oklch(0.280 0.060 250);              /* #1E3A5F - Navy */
   --brand-foreground: oklch(1 0 0);             /* white */
-  --brand-muted: oklch(0.963 0.018 70);         /* #FDF0E6 - light orange tint */
-  --brand-2: oklch(0.324 0.022 256);            /* #2D3748 - dark anthracite */
+  --brand-muted: oklch(0.960 0.010 250);        /* #EDF2F7 - light blue-gray tint */
+  --brand-2: oklch(0.700 0.100 85);             /* #D4A843 - Gold */
 
   --radius: 1rem;
   --background: oklch(1 0 0);

@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
+import { ConvexProvider } from '@/modules/convex/provider'
 import { TopBar } from '@/components/layout/top-bar'
 import { OutboxProcessor } from '@/components/layout/outbox-processor'
+import { CacheSync } from '@/components/layout/cache-sync'
 import { CatalogProvider } from '@/components/layout/catalog-provider'
 import { Toaster } from 'sonner'
 
@@ -23,7 +25,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#E8731A',
+  themeColor: '#1E3A5F',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -33,12 +35,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="de">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <CatalogProvider>
-          <TopBar />
-          <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
-          <OutboxProcessor />
-        </CatalogProvider>
-        <Toaster richColors position="top-right" />
+        <ConvexProvider>
+          <CatalogProvider>
+            <TopBar />
+            <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
+            <OutboxProcessor />
+            <CacheSync />
+          </CatalogProvider>
+          <Toaster richColors position="top-right" />
+        </ConvexProvider>
       </body>
     </html>
   )

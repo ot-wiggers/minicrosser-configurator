@@ -1,6 +1,2 @@
 export * from './types'
 export { db } from './db'
-export { documentRepo } from './document-repo'
-export { outboxRepo } from './outbox-repo'
-export { sequenceRepo } from './sequence-repo'
-export { categoryRepo, baseModelRepo, optionGroupRepo, optionRepo, settingsRepo } from './catalog-repo'

@@ -1,14 +1,15 @@
 'use client'
 
-import { useLiveQuery } from 'dexie-react-hooks'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { useConfiguratorStore } from '@/modules/configurator'
-import { db } from '@/modules/storage/db'
 import { calculatePricingFromItems } from '@/modules/pricing'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
 import { ShoppingCart } from 'lucide-react'
+import { useMemo } from 'react'
 
 interface CartSidebarProps {
   onCreateDocument: () => void
@@ -17,37 +18,25 @@ interface CartSidebarProps {
 export function CartSidebar({ onCreateDocument }: CartSidebarProps) {
   const { documentType, selectedBaseModelId, selectedOptions } = useConfiguratorStore()
 
-  const pricing = useLiveQuery(
-    async () => {
-      if (!selectedBaseModelId) return null
-      const baseModel = await db.baseModels.get(selectedBaseModelId)
-      if (!baseModel) return null
-
-      const optionItems: Array<{
-        skuCode: string
-        articleNo: string
-        name: string
-        priceNet: number
-        quantity: number
-      }> = []
-
-      for (const opt of Object.values(selectedOptions)) {
-        const option = await db.options.where('skuCode').equals(opt.skuCode).first()
-        if (option) {
-          optionItems.push({
-            skuCode: option.skuCode,
-            articleNo: option.articleNo,
-            name: option.name,
-            priceNet: option.priceNet,
-            quantity: opt.quantity || 1,
-          })
-        }
-      }
-
-      return calculatePricingFromItems(baseModel, optionItems)
-    },
-    [selectedBaseModelId, selectedOptions],
+  const baseModel = useQuery(
+    api.baseModels.getById,
+    selectedBaseModelId ? { id: selectedBaseModelId as any } : 'skip',
   )
+
+  // Calculate pricing from store data (selectedOptions already contains pricing info)
+  const pricing = useMemo(() => {
+    if (!baseModel) return null
+
+    const optionItems = Object.values(selectedOptions).map((opt) => ({
+      skuCode: opt.skuCode,
+      articleNo: opt.articleNo,
+      name: opt.name,
+      priceNet: opt.priceNet,
+      quantity: opt.quantity || 1,
+    }))
+
+    return calculatePricingFromItems(baseModel, optionItems)
+  }, [baseModel, selectedOptions])
 
   if (!pricing) {
     return (

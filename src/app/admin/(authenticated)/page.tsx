@@ -1,21 +1,21 @@
 'use client'
 
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/modules/storage/db'
+import { useQuery } from 'convex/react'
+import { api } from '../../../../convex/_generated/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FolderOpen, Car, Layers, ListChecks } from 'lucide-react'
 
 export default function AdminDashboard() {
-  const categoryCount = useLiveQuery(() => db.categories.count())
-  const modelCount = useLiveQuery(() => db.baseModels.count())
-  const groupCount = useLiveQuery(() => db.optionGroups.count())
-  const optionCount = useLiveQuery(() => db.options.count())
+  const categories = useQuery(api.categories.list)
+  const models = useQuery(api.baseModels.list)
+  const groups = useQuery(api.optionGroups.list)
+  const options = useQuery(api.options.list)
 
   const stats = [
-    { label: 'Kategorien', value: categoryCount, icon: FolderOpen },
-    { label: 'Modelle', value: modelCount, icon: Car },
-    { label: 'Optionsgruppen', value: groupCount, icon: Layers },
-    { label: 'Optionen', value: optionCount, icon: ListChecks },
+    { label: 'Kategorien', value: categories?.length, icon: FolderOpen },
+    { label: 'Modelle', value: models?.length, icon: Car },
+    { label: 'Optionsgruppen', value: groups?.length, icon: Layers },
+    { label: 'Optionen', value: options?.length, icon: ListChecks },
   ]
 
   return (

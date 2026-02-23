@@ -1,33 +1,41 @@
 'use client'
 
 import { create } from 'zustand'
-import type { VariantCategory } from '@/modules/catalog/types'
 import type { DocumentType, SelectedOption } from '@/modules/storage/types'
 
 interface ConfiguratorState {
   documentType: DocumentType
-  selectedCategory: VariantCategory | null
+  selectedCategory: string | null // Convex category _id
   selectedBaseModelId: string | null
   selectedOptions: Record<string, SelectedOption> // keyed by optionItemId
   currentStep: number
+  editingDocumentId: string | null // Set when editing an existing document
 
   // Actions
   setDocumentType: (type: DocumentType) => void
-  setCategory: (category: VariantCategory) => void
+  setCategory: (categoryId: string) => void
   setBaseModel: (id: string) => void
   toggleOption: (option: SelectedOption) => void
   setOptionQuantity: (optionItemId: string, quantity: number) => void
   removeOption: (optionItemId: string) => void
   setStep: (step: number) => void
   reset: () => void
+  loadFromDocument: (doc: {
+    _id: string
+    documentType: DocumentType
+    selectedCategory: string
+    selectedBaseModelId: string
+    selectedOptions: SelectedOption[]
+  }) => void
 }
 
 const initialState = {
   documentType: 'QUOTE' as DocumentType,
-  selectedCategory: null as VariantCategory | null,
+  selectedCategory: null as string | null,
   selectedBaseModelId: null as string | null,
   selectedOptions: {} as Record<string, SelectedOption>,
   currentStep: 0,
+  editingDocumentId: null as string | null,
 }
 
 export const useConfiguratorStore = create<ConfiguratorState>((set) => ({
@@ -35,9 +43,9 @@ export const useConfiguratorStore = create<ConfiguratorState>((set) => ({
 
   setDocumentType: (type) => set({ documentType: type }),
 
-  setCategory: (category) =>
+  setCategory: (categoryId) =>
     set({
-      selectedCategory: category,
+      selectedCategory: categoryId,
       selectedBaseModelId: null,
       selectedOptions: {},
       currentStep: 1,
@@ -75,4 +83,19 @@ export const useConfiguratorStore = create<ConfiguratorState>((set) => ({
   setStep: (step) => set({ currentStep: step }),
 
   reset: () => set(initialState),
+
+  loadFromDocument: (doc) => {
+    const optionsMap: Record<string, SelectedOption> = {}
+    for (const opt of doc.selectedOptions) {
+      optionsMap[opt.optionItemId] = opt
+    }
+    set({
+      documentType: doc.documentType,
+      selectedCategory: doc.selectedCategory,
+      selectedBaseModelId: doc.selectedBaseModelId,
+      selectedOptions: optionsMap,
+      currentStep: 2, // Go to accessory step for editing
+      editingDocumentId: doc._id,
+    })
+  },
 }))

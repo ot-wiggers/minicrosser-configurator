@@ -1,5 +1,4 @@
 import { rgb, type PDFPage, type PDFFont } from 'pdf-lib'
-import { settingsRepo } from '@/modules/storage'
 
 export interface CorporateSettings {
   companyName: string
@@ -15,27 +14,116 @@ export interface CorporateSettings {
   bankBic1: string
   pdfColorPrimary: string
   pdfColorAccent: string
+  // Extended PDF settings
+  pdfFontSizeBody: number
+  pdfFontSizeHeading: number
+  pdfFontSizeFooter: number
+  pdfHeaderHeight: number
+  pdfAccentStripeWidth: number
+  pdfMarginTop: number
+  pdfMarginBottom: number
+  pdfMarginLeft: number
+  pdfMarginRight: number
+  pdfHeaderLine1: string
+  pdfHeaderLine2: string
+  pdfHeaderLine3: string
+  pdfSlogan: string
 }
 
-export async function loadCorporateSettings(): Promise<CorporateSettings> {
-  const getValue = async (key: string, def: string) =>
-    (await settingsRepo.getValue<string>(key, def))
+const DEFAULTS: CorporateSettings = {
+  companyName: 'Wiggers GmbH & Co. KG',
+  companyStreet: 'Gerhard-Stalling-Strasse 42',
+  companyZip: '26135',
+  companyCity: 'Oldenburg',
+  companyPhone: '04 41 / 3 61 11 3 09',
+  companyFax: '04 41 / 3 61 11 3 09',
+  companyEmail: 'info@minicrosser.info',
+  companyWeb: 'www.minicrosser.info',
+  bankName1: 'Oldenburgische Landesbank',
+  bankIban1: '',
+  bankBic1: '',
+  pdfColorPrimary: '#1E3A5F',
+  pdfColorAccent: '#D4A843',
+  pdfFontSizeBody: 9,
+  pdfFontSizeHeading: 11,
+  pdfFontSizeFooter: 6.5,
+  pdfHeaderHeight: 70,
+  pdfAccentStripeWidth: 8,
+  pdfMarginTop: 50,
+  pdfMarginBottom: 60,
+  pdfMarginLeft: 50,
+  pdfMarginRight: 50,
+  pdfHeaderLine1: '',
+  pdfHeaderLine2: '',
+  pdfHeaderLine3: '',
+  pdfSlogan: '',
+}
+
+/**
+ * Builds CorporateSettings from a key-value settings map (from Convex).
+ * Falls back to hardcoded defaults for missing keys.
+ */
+export function buildCorporateSettings(
+  settingsMap: Record<string, string | number | boolean>,
+): CorporateSettings {
+  function str(key: string, def: string): string {
+    const val = settingsMap[key]
+    return val !== undefined ? String(val) : def
+  }
+  function num(key: string, def: number): number {
+    const val = settingsMap[key]
+    if (val === undefined) return def
+    const n = typeof val === 'number' ? val : parseFloat(String(val))
+    return isNaN(n) ? def : n
+  }
 
   return {
-    companyName: await getValue('companyName', 'Wiggers GmbH & Co. KG'),
-    companyStreet: await getValue('companyStreet', 'Gerhard-Stalling-Straße 42'),
-    companyZip: await getValue('companyZip', '26135'),
-    companyCity: await getValue('companyCity', 'Oldenburg'),
-    companyPhone: await getValue('companyPhone', '04 41 / 3 61 11 3 09'),
-    companyFax: await getValue('companyFax', '04 41 / 3 61 11 3 09'),
-    companyEmail: await getValue('companyEmail', 'info@minicrosser.info'),
-    companyWeb: await getValue('companyWeb', 'www.minicrosser.info'),
-    bankName1: await getValue('bankName1', 'Oldenburgische Landesbank'),
-    bankIban1: await getValue('bankIban1', ''),
-    bankBic1: await getValue('bankBic1', ''),
-    pdfColorPrimary: await getValue('pdfColorPrimary', '#3A4250'),
-    pdfColorAccent: await getValue('pdfColorAccent', '#D4A843'),
+    companyName: str('companyName', DEFAULTS.companyName),
+    companyStreet: str('companyStreet', DEFAULTS.companyStreet),
+    companyZip: str('companyZip', DEFAULTS.companyZip),
+    companyCity: str('companyCity', DEFAULTS.companyCity),
+    companyPhone: str('companyPhone', DEFAULTS.companyPhone),
+    companyFax: str('companyFax', DEFAULTS.companyFax),
+    companyEmail: str('companyEmail', DEFAULTS.companyEmail),
+    companyWeb: str('companyWeb', DEFAULTS.companyWeb),
+    bankName1: str('bankName1', DEFAULTS.bankName1),
+    bankIban1: str('bankIban1', DEFAULTS.bankIban1),
+    bankBic1: str('bankBic1', DEFAULTS.bankBic1),
+    pdfColorPrimary: str('pdfColorPrimary', DEFAULTS.pdfColorPrimary),
+    pdfColorAccent: str('pdfColorAccent', DEFAULTS.pdfColorAccent),
+    pdfFontSizeBody: num('pdfFontSizeBody', DEFAULTS.pdfFontSizeBody),
+    pdfFontSizeHeading: num('pdfFontSizeHeading', DEFAULTS.pdfFontSizeHeading),
+    pdfFontSizeFooter: num('pdfFontSizeFooter', DEFAULTS.pdfFontSizeFooter),
+    pdfHeaderHeight: num('pdfHeaderHeight', DEFAULTS.pdfHeaderHeight),
+    pdfAccentStripeWidth: num('pdfAccentStripeWidth', DEFAULTS.pdfAccentStripeWidth),
+    pdfMarginTop: num('pdfMarginTop', DEFAULTS.pdfMarginTop),
+    pdfMarginBottom: num('pdfMarginBottom', DEFAULTS.pdfMarginBottom),
+    pdfMarginLeft: num('pdfMarginLeft', DEFAULTS.pdfMarginLeft),
+    pdfMarginRight: num('pdfMarginRight', DEFAULTS.pdfMarginRight),
+    pdfHeaderLine1: str('pdfHeaderLine1', DEFAULTS.pdfHeaderLine1),
+    pdfHeaderLine2: str('pdfHeaderLine2', DEFAULTS.pdfHeaderLine2),
+    pdfHeaderLine3: str('pdfHeaderLine3', DEFAULTS.pdfHeaderLine3),
+    pdfSlogan: str('pdfSlogan', DEFAULTS.pdfSlogan),
   }
+}
+
+/**
+ * Loads corporate settings. Uses a provided settings map if available,
+ * otherwise falls back to hardcoded defaults.
+ */
+export async function loadCorporateSettings(
+  preloadedSettings?: Record<string, string | number | boolean>,
+): Promise<CorporateSettings> {
+  if (preloadedSettings) {
+    return buildCorporateSettings(preloadedSettings)
+  }
+  // Fallback: use defaults (Dexie no longer used)
+  return { ...DEFAULTS }
+}
+
+/** Returns default settings for previews or offline fallback. */
+export function getDefaultSettings(): CorporateSettings {
+  return { ...DEFAULTS }
 }
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
@@ -60,12 +148,13 @@ export function drawCorporateHeader(
   docTitle: string,
   pageWidth: number,
 ): number {
-  const headerHeight = 70
+  const headerHeight = settings.pdfHeaderHeight
+  const stripeWidth = settings.pdfAccentStripeWidth
   const headerY = page.getHeight() - headerHeight
   const primary = hexToRgb(settings.pdfColorPrimary)
   const accent = hexToRgb(settings.pdfColorAccent)
 
-  // Anthracite header bar (full width)
+  // Primary header bar (full width)
   page.drawRectangle({
     x: 0,
     y: headerY,
@@ -74,40 +163,53 @@ export function drawCorporateHeader(
     color: rgb(primary.r, primary.g, primary.b),
   })
 
-  // Gold accent stripe on left (8pt wide)
+  // Accent stripe on left
   page.drawRectangle({
     x: 0,
     y: headerY,
-    width: 8,
+    width: stripeWidth,
     height: headerHeight,
     color: rgb(accent.r, accent.g, accent.b),
   })
 
   // Company name (white, top-left)
   page.drawText(settings.companyName, {
-    x: 20,
+    x: stripeWidth + 12,
     y: headerY + headerHeight - 25,
-    size: 11,
+    size: settings.pdfFontSizeHeading,
     font: fonts.bold,
     color: rgb(1, 1, 1),
   })
 
-  // Company address line (white, smaller)
-  const addressLine = `${settings.companyStreet} | ${settings.companyZip} ${settings.companyCity}`
-  page.drawText(addressLine, {
-    x: 20,
+  // Address line or custom header lines
+  const headerLine = settings.pdfHeaderLine1 ||
+    `${settings.companyStreet} | ${settings.companyZip} ${settings.companyCity}`
+  page.drawText(headerLine, {
+    x: stripeWidth + 12,
     y: headerY + headerHeight - 40,
     size: 7,
     font: fonts.regular,
     color: rgb(0.85, 0.85, 0.85),
   })
 
+  // Optional slogan or second header line
+  if (settings.pdfSlogan || settings.pdfHeaderLine2) {
+    page.drawText(settings.pdfSlogan || settings.pdfHeaderLine2, {
+      x: stripeWidth + 12,
+      y: headerY + headerHeight - 52,
+      size: 6.5,
+      font: fonts.regular,
+      color: rgb(0.75, 0.75, 0.75),
+    })
+  }
+
   // Document title (white, right-aligned, large)
-  const titleWidth = fonts.bold.widthOfTextAtSize(docTitle, 18)
+  const titleSize = 18
+  const titleWidth = fonts.bold.widthOfTextAtSize(docTitle, titleSize)
   page.drawText(docTitle, {
     x: pageWidth - titleWidth - 20,
     y: headerY + headerHeight - 30,
-    size: 18,
+    size: titleSize,
     font: fonts.bold,
     color: rgb(1, 1, 1),
   })
@@ -125,13 +227,13 @@ export function drawCorporateFooter(
   pageWidth: number,
 ): void {
   const footerY = 35
-  const fontSize = 6.5
+  const fontSize = settings.pdfFontSizeFooter
   const color = rgb(0.5, 0.5, 0.5)
 
   // Thin line above footer
   page.drawLine({
-    start: { x: 50, y: footerY + 12 },
-    end: { x: pageWidth - 50, y: footerY + 12 },
+    start: { x: settings.pdfMarginLeft, y: footerY + 12 },
+    end: { x: pageWidth - settings.pdfMarginRight, y: footerY + 12 },
     thickness: 0.5,
     color: rgb(0.8, 0.8, 0.8),
   })
@@ -139,7 +241,7 @@ export function drawCorporateFooter(
   // Left column: company info
   page.drawText(
     `${settings.companyName} | ${settings.companyStreet} | ${settings.companyZip} ${settings.companyCity}`,
-    { x: 50, y: footerY, size: fontSize, font: fonts.regular, color },
+    { x: settings.pdfMarginLeft, y: footerY, size: fontSize, font: fonts.regular, color },
   )
 
   // Middle: contact
@@ -158,7 +260,7 @@ export function drawCorporateFooter(
     const bankText = `${settings.bankName1} | IBAN: ${settings.bankIban1}`
     const bankWidth = fonts.regular.widthOfTextAtSize(bankText, fontSize)
     page.drawText(bankText, {
-      x: pageWidth - bankWidth - 50,
+      x: pageWidth - bankWidth - settings.pdfMarginRight,
       y: footerY,
       size: fontSize,
       font: fonts.regular,
@@ -174,12 +276,13 @@ export function drawAccentStripe(
   page: PDFPage,
   accentColor: string,
   pageHeight: number,
+  stripeWidth = 6,
 ): void {
   const accent = hexToRgb(accentColor)
   page.drawRectangle({
     x: 0,
     y: 0,
-    width: 6,
+    width: stripeWidth,
     height: pageHeight,
     color: rgb(accent.r, accent.g, accent.b),
   })

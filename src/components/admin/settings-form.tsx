@@ -1,14 +1,21 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { settingsRepo } from '@/modules/storage'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import { PdfPreview } from '@/components/admin/pdf-preview'
 import { toast } from 'sonner'
-import { Save } from 'lucide-react'
+import { Save, ChevronDown } from 'lucide-react'
 
 const SETTING_KEYS = [
   'companyName',
@@ -25,39 +32,51 @@ const SETTING_KEYS = [
   'bankName1',
   'bankIban1',
   'bankBic1',
+  // Extended PDF settings
+  'pdfFontSizeBody',
+  'pdfFontSizeHeading',
+  'pdfFontSizeFooter',
+  'pdfHeaderHeight',
+  'pdfAccentStripeWidth',
+  'pdfMarginTop',
+  'pdfMarginBottom',
+  'pdfMarginLeft',
+  'pdfMarginRight',
+  'pdfHeaderLine1',
+  'pdfHeaderLine2',
+  'pdfHeaderLine3',
+  'pdfSlogan',
 ] as const
 
 type SettingKey = (typeof SETTING_KEYS)[number]
 
 export function SettingsForm() {
-  const [values, setValues] = useState<Record<string, string>>({})
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const settings = useQuery(api.settings.list)
+  const setMany = useMutation(api.settings.setMany)
 
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [initialized, setInitialized] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [showAdvancedPdf, setShowAdvancedPdf] = useState(false)
+
+  // Initialize form values when settings load
   useEffect(() => {
-    async function load() {
-      try {
-        const all = await settingsRepo.getAll()
-        const map: Record<string, string> = {}
-        for (const rec of all) {
-          map[rec.key] = String(rec.value)
-        }
-        // Convert stored decimal vatRate to percentage for display
-        if (map.vatRate !== undefined) {
-          const decimal = parseFloat(map.vatRate)
-          if (!isNaN(decimal)) {
-            map.vatRate = String(Math.round(decimal * 100))
-          }
-        }
-        setValues(map)
-      } catch {
-        toast.error('Einstellungen konnten nicht geladen werden.')
-      } finally {
-        setLoading(false)
+    if (settings && !initialized) {
+      const map: Record<string, string> = {}
+      for (const rec of settings as any[]) {
+        map[rec.key] = String(rec.value)
       }
+      // Convert stored decimal vatRate to percentage for display
+      if (map.vatRate !== undefined) {
+        const decimal = parseFloat(map.vatRate)
+        if (!isNaN(decimal)) {
+          map.vatRate = String(Math.round(decimal * 100))
+        }
+      }
+      setValues(map)
+      setInitialized(true)
     }
-    load()
-  }, [])
+  }, [settings, initialized])
 
   function update(key: SettingKey, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }))
@@ -66,16 +85,30 @@ export function SettingsForm() {
   async function handleSave() {
     setSaving(true)
     try {
+      const entries: Array<{ key: string; value: string | number }> = []
       for (const key of SETTING_KEYS) {
         const raw = values[key] ?? ''
         if (key === 'vatRate') {
-          // Store as decimal (e.g. 19 -> 0.19)
           const pct = parseFloat(raw)
-          await settingsRepo.set(key, isNaN(pct) ? 0 : pct / 100)
+          entries.push({ key, value: isNaN(pct) ? 0 : pct / 100 })
+        } else if (
+          key.startsWith('pdfFontSize') ||
+          key.startsWith('pdfHeader') && key === 'pdfHeaderHeight' ||
+          key === 'pdfAccentStripeWidth' ||
+          key.startsWith('pdfMargin')
+        ) {
+          // Store numeric PDF settings as numbers
+          const n = parseFloat(raw)
+          if (!isNaN(n)) {
+            entries.push({ key, value: n })
+          } else {
+            entries.push({ key, value: raw })
+          }
         } else {
-          await settingsRepo.set(key, raw)
+          entries.push({ key, value: raw })
         }
       }
+      await setMany({ entries: entries as any })
       toast.success('Einstellungen gespeichert.')
     } catch {
       toast.error('Fehler beim Speichern der Einstellungen.')
@@ -84,7 +117,7 @@ export function SettingsForm() {
     }
   }
 
-  if (loading) {
+  if (!settings) {
     return <p className="text-sm text-muted-foreground">Lade Einstellungen...</p>
   }
 
@@ -194,43 +227,189 @@ export function SettingsForm() {
         <CardHeader>
           <CardTitle>PDF-Design</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="pdfColorPrimary">Primärfarbe</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                id="pdfColorPrimaryPicker"
-                value={values.pdfColorPrimary || '#000000'}
-                onChange={(e) => update('pdfColorPrimary', e.target.value)}
-                className="h-10 w-10 shrink-0 cursor-pointer rounded border p-0.5"
-              />
+        <CardContent className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="pdfColorPrimary">Primaerfarbe</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  id="pdfColorPrimaryPicker"
+                  value={values.pdfColorPrimary || '#000000'}
+                  onChange={(e) => update('pdfColorPrimary', e.target.value)}
+                  className="h-10 w-10 shrink-0 cursor-pointer rounded border p-0.5"
+                />
+                <Input
+                  id="pdfColorPrimary"
+                  value={values.pdfColorPrimary ?? ''}
+                  placeholder="#1E3A5F"
+                  onChange={(e) => update('pdfColorPrimary', e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="pdfColorAccent">Akzentfarbe</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  id="pdfColorAccentPicker"
+                  value={values.pdfColorAccent || '#000000'}
+                  onChange={(e) => update('pdfColorAccent', e.target.value)}
+                  className="h-10 w-10 shrink-0 cursor-pointer rounded border p-0.5"
+                />
+                <Input
+                  id="pdfColorAccent"
+                  value={values.pdfColorAccent ?? ''}
+                  placeholder="#D4A843"
+                  onChange={(e) => update('pdfColorAccent', e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Custom Header Lines */}
+          <div className="grid gap-4">
+            <div>
+              <Label htmlFor="pdfSlogan">Slogan / Untertitel</Label>
               <Input
-                id="pdfColorPrimary"
-                value={values.pdfColorPrimary ?? ''}
-                placeholder="#000000"
-                onChange={(e) => update('pdfColorPrimary', e.target.value)}
+                id="pdfSlogan"
+                value={values.pdfSlogan ?? ''}
+                placeholder="Ihr Spezialist fuer Elektromobile"
+                onChange={(e) => update('pdfSlogan', e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="pdfHeaderLine1">Header Zeile 1 (ueberschreibt Adresszeile)</Label>
+              <Input
+                id="pdfHeaderLine1"
+                value={values.pdfHeaderLine1 ?? ''}
+                placeholder="Leer = Standard-Adresszeile"
+                onChange={(e) => update('pdfHeaderLine1', e.target.value)}
               />
             </div>
           </div>
-          <div>
-            <Label htmlFor="pdfColorAccent">Akzentfarbe</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                id="pdfColorAccentPicker"
-                value={values.pdfColorAccent || '#000000'}
-                onChange={(e) => update('pdfColorAccent', e.target.value)}
-                className="h-10 w-10 shrink-0 cursor-pointer rounded border p-0.5"
-              />
-              <Input
-                id="pdfColorAccent"
-                value={values.pdfColorAccent ?? ''}
-                placeholder="#000000"
-                onChange={(e) => update('pdfColorAccent', e.target.value)}
-              />
-            </div>
-          </div>
+
+          {/* Advanced PDF Settings */}
+          <Collapsible open={showAdvancedPdf} onOpenChange={setShowAdvancedPdf}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-between">
+                Erweiterte PDF-Einstellungen
+                <ChevronDown className={`h-4 w-4 transition-transform ${showAdvancedPdf ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <Label htmlFor="pdfFontSizeBody">Schriftgroesse Text</Label>
+                  <Input
+                    id="pdfFontSizeBody"
+                    type="number"
+                    min={6}
+                    max={14}
+                    step={0.5}
+                    value={values.pdfFontSizeBody ?? '9'}
+                    onChange={(e) => update('pdfFontSizeBody', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pdfFontSizeHeading">Schriftgroesse Ueberschrift</Label>
+                  <Input
+                    id="pdfFontSizeHeading"
+                    type="number"
+                    min={8}
+                    max={18}
+                    step={0.5}
+                    value={values.pdfFontSizeHeading ?? '11'}
+                    onChange={(e) => update('pdfFontSizeHeading', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pdfFontSizeFooter">Schriftgroesse Fusszeile</Label>
+                  <Input
+                    id="pdfFontSizeFooter"
+                    type="number"
+                    min={5}
+                    max={10}
+                    step={0.5}
+                    value={values.pdfFontSizeFooter ?? '6.5'}
+                    onChange={(e) => update('pdfFontSizeFooter', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="pdfHeaderHeight">Header-Hoehe (pt)</Label>
+                  <Input
+                    id="pdfHeaderHeight"
+                    type="number"
+                    min={40}
+                    max={120}
+                    value={values.pdfHeaderHeight ?? '70'}
+                    onChange={(e) => update('pdfHeaderHeight', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pdfAccentStripeWidth">Akzentstreifen-Breite (pt)</Label>
+                  <Input
+                    id="pdfAccentStripeWidth"
+                    type="number"
+                    min={0}
+                    max={20}
+                    value={values.pdfAccentStripeWidth ?? '8'}
+                    onChange={(e) => update('pdfAccentStripeWidth', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-4">
+                <div>
+                  <Label htmlFor="pdfMarginTop">Rand oben (pt)</Label>
+                  <Input
+                    id="pdfMarginTop"
+                    type="number"
+                    min={20}
+                    max={100}
+                    value={values.pdfMarginTop ?? '50'}
+                    onChange={(e) => update('pdfMarginTop', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pdfMarginBottom">Rand unten (pt)</Label>
+                  <Input
+                    id="pdfMarginBottom"
+                    type="number"
+                    min={20}
+                    max={100}
+                    value={values.pdfMarginBottom ?? '60'}
+                    onChange={(e) => update('pdfMarginBottom', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pdfMarginLeft">Rand links (pt)</Label>
+                  <Input
+                    id="pdfMarginLeft"
+                    type="number"
+                    min={20}
+                    max={100}
+                    value={values.pdfMarginLeft ?? '50'}
+                    onChange={(e) => update('pdfMarginLeft', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pdfMarginRight">Rand rechts (pt)</Label>
+                  <Input
+                    id="pdfMarginRight"
+                    type="number"
+                    min={20}
+                    max={100}
+                    value={values.pdfMarginRight ?? '50'}
+                    onChange={(e) => update('pdfMarginRight', e.target.value)}
+                  />
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
 
@@ -275,6 +454,9 @@ export function SettingsForm() {
           {saving ? 'Speichert...' : 'Speichern'}
         </Button>
       </div>
+
+      {/* ---- PDF Live Preview ---- */}
+      <PdfPreview settingsMap={values} />
     </div>
   )
 }

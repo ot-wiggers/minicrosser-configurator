@@ -1,37 +1,17 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { OnlineIndicator } from './online-indicator'
 import { cn } from '@/lib/utils'
-import { outboxRepo } from '@/modules/storage'
 import { LayoutDashboard, SendHorizonal } from 'lucide-react'
 
 export function TopBar() {
   const pathname = usePathname()
-  const [pendingCount, setPendingCount] = useState(0)
-
-  const loadPendingCount = useCallback(async () => {
-    try {
-      const count = await outboxRepo.countPending()
-      setPendingCount(count)
-    } catch {
-      // IndexedDB may not be available during SSR
-    }
-  }, [])
-
-  useEffect(() => {
-    // Use setTimeout to avoid synchronous setState in effect body
-    const timeout = setTimeout(loadPendingCount, 0)
-    const interval = setInterval(loadPendingCount, 10000)
-    window.addEventListener('online', loadPendingCount)
-    return () => {
-      clearTimeout(timeout)
-      clearInterval(interval)
-      window.removeEventListener('online', loadPendingCount)
-    }
-  }, [loadPendingCount])
+  const outbox = useQuery(api.outbox.listPending)
+  const pendingCount = (outbox as any[] | undefined)?.length ?? 0
 
   const navItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard, badge: 0 },

@@ -2,52 +2,64 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import bcrypt from 'bcryptjs'
-import { userRepo } from '@/modules/storage/user-repo'
+
+export type UserRole = 'admin' | 'employee'
+
+interface AuthUser {
+  id: string
+  name: string
+  username?: string
+  role: UserRole
+  mustChangePassword: boolean
+}
 
 interface AuthState {
   isAuthenticated: boolean
-  username: string | null
-  mustChangePassword: boolean
-  login: (username: string, password: string) => Promise<boolean>
-  logout: () => void
-  changePassword: (newPassword: string) => Promise<boolean>
+  token: string | null
+  user: AuthUser | null
+
+  // Actions (called from components after Convex mutation)
+  setSession: (token: string, user: AuthUser) => void
+  clearSession: () => void
+  setMustChangePassword: (value: boolean) => void
+
+  // Derived helpers
+  isAdmin: () => boolean
+  isEmployee: () => boolean
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       isAuthenticated: false,
-      username: null,
-      mustChangePassword: false,
+      token: null,
+      user: null,
 
-      login: async (username: string, password: string) => {
-        const user = await userRepo.getByUsername(username)
-        if (!user) return false
-        const valid = await bcrypt.compare(password, user.passwordHash)
-        if (!valid) return false
+      setSession: (token: string, user: AuthUser) => {
         set({
           isAuthenticated: true,
-          username: user.username,
-          mustChangePassword: user.mustChangePassword,
+          token,
+          user,
         })
-        return true
       },
 
-      logout: () => {
-        set({ isAuthenticated: false, username: null, mustChangePassword: false })
+      clearSession: () => {
+        set({
+          isAuthenticated: false,
+          token: null,
+          user: null,
+        })
       },
 
-      changePassword: async (newPassword: string) => {
-        const { username } = get()
-        if (!username) return false
-        const user = await userRepo.getByUsername(username)
-        if (!user) return false
-        const hash = await bcrypt.hash(newPassword, 10)
-        await userRepo.updatePassword(user.id, hash)
-        set({ mustChangePassword: false })
-        return true
+      setMustChangePassword: (value: boolean) => {
+        const user = get().user
+        if (user) {
+          set({ user: { ...user, mustChangePassword: value } })
+        }
       },
+
+      isAdmin: () => get().user?.role === 'admin',
+      isEmployee: () => get().user?.role === 'employee',
     }),
     { name: 'mc-auth' },
   ),

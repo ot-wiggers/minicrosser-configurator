@@ -1,44 +1,15 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { useConfiguratorStore } from '@/modules/configurator'
-import { db } from '@/modules/storage/db'
-import type { OptionGroupRecord, OptionRecord } from '@/modules/catalog/db-types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { cn, formatCurrency } from '@/lib/utils'
 import { Check, Circle } from 'lucide-react'
 
-function useOptionImageUrls(
-  groupsWithOptions: { group: OptionGroupRecord; items: OptionRecord[] }[] | undefined,
-) {
-  const urlMap = useMemo(() => {
-    const map = new Map<string, string>()
-    if (!groupsWithOptions) return map
-    for (const { items } of groupsWithOptions) {
-      for (const item of items) {
-        if (item.imageBlob) {
-          map.set(item.id, URL.createObjectURL(item.imageBlob))
-        }
-      }
-    }
-    return map
-  }, [groupsWithOptions])
-
-  useEffect(() => {
-    return () => {
-      for (const url of urlMap.values()) {
-        URL.revokeObjectURL(url)
-      }
-    }
-  }, [urlMap])
-
-  return urlMap
-}
-
-function OptionThumbnail({ url }: { url?: string }) {
+function OptionThumbnail({ url }: { url?: string | null }) {
   if (!url) return null
   return (
     <img
@@ -52,29 +23,30 @@ function OptionThumbnail({ url }: { url?: string }) {
 function SingleGroup({
   group,
   items,
-  imageUrls,
 }: {
-  group: OptionGroupRecord
-  items: OptionRecord[]
-  imageUrls: Map<string, string>
+  group: any
+  items: any[]
 }) {
   const { selectedOptions, toggleOption, removeOption } = useConfiguratorStore()
 
   // Find current selection for this group
-  const currentSelection = items.find((item) => selectedOptions[item.id])
+  const currentSelection = items.find((item) => selectedOptions[item._id])
 
-  function handleSelect(item: OptionRecord) {
+  function handleSelect(item: any) {
     // For SINGLE groups: deselect current, select new
-    if (currentSelection && currentSelection.id !== item.id) {
-      removeOption(currentSelection.id)
+    if (currentSelection && currentSelection._id !== item._id) {
+      removeOption(currentSelection._id)
     }
 
-    if (currentSelection?.id === item.id) {
-      removeOption(item.id)
+    if (currentSelection?._id === item._id) {
+      removeOption(item._id)
     } else {
       toggleOption({
-        optionItemId: item.id,
+        optionItemId: item._id,
         skuCode: item.skuCode,
+        articleNo: item.articleNo,
+        name: item.name,
+        priceNet: item.priceNet,
         quantity: 1,
       })
     }
@@ -84,11 +56,11 @@ function SingleGroup({
     <div>
       <h3 className="mb-3 text-lg font-semibold">{group.name}</h3>
       <div className="space-y-2">
-        {items.map((item) => {
-          const isSelected = !!selectedOptions[item.id]
+        {items.map((item: any) => {
+          const isSelected = !!selectedOptions[item._id]
           return (
             <Card
-              key={item.id}
+              key={item._id}
               className={cn(
                 'cursor-pointer transition-all hover:border-primary/50',
                 isSelected && 'border-primary ring-2 ring-primary/20',
@@ -104,7 +76,7 @@ function SingleGroup({
                 >
                   {isSelected && <Circle className="h-2 w-2 fill-white text-white" />}
                 </div>
-                <OptionThumbnail url={imageUrls.get(item.id)} />
+                <OptionThumbnail url={item.imageUrl} />
                 <div className="flex-1">
                   <p className="font-medium">{item.name}</p>
                   {item.description && (
@@ -126,18 +98,19 @@ function SingleGroup({
 function MultiGroup({
   group,
   items,
-  imageUrls,
 }: {
-  group: OptionGroupRecord
-  items: OptionRecord[]
-  imageUrls: Map<string, string>
+  group: any
+  items: any[]
 }) {
   const { selectedOptions, toggleOption, setOptionQuantity } = useConfiguratorStore()
 
-  function handleToggle(item: OptionRecord) {
+  function handleToggle(item: any) {
     toggleOption({
-      optionItemId: item.id,
+      optionItemId: item._id,
       skuCode: item.skuCode,
+      articleNo: item.articleNo,
+      name: item.name,
+      priceNet: item.priceNet,
       quantity: 1,
     })
   }
@@ -146,11 +119,11 @@ function MultiGroup({
     <div>
       <h3 className="mb-3 text-lg font-semibold">{group.name}</h3>
       <div className="space-y-2">
-        {items.map((item) => {
-          const isSelected = !!selectedOptions[item.id]
+        {items.map((item: any) => {
+          const isSelected = !!selectedOptions[item._id]
           return (
             <Card
-              key={item.id}
+              key={item._id}
               className={cn(
                 'cursor-pointer transition-all hover:border-primary/50',
                 isSelected && 'border-primary ring-2 ring-primary/20',
@@ -166,7 +139,7 @@ function MultiGroup({
                 >
                   {isSelected && <Check className="h-3 w-3 text-white" />}
                 </div>
-                <OptionThumbnail url={imageUrls.get(item.id)} />
+                <OptionThumbnail url={item.imageUrl} />
                 <div className="flex-1">
                   <p className="font-medium">{item.name}</p>
                   {item.description && (
@@ -177,9 +150,9 @@ function MultiGroup({
                   <Input
                     type="number"
                     min={1}
-                    value={selectedOptions[item.id]?.quantity ?? 1}
+                    value={selectedOptions[item._id]?.quantity ?? 1}
                     onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => setOptionQuantity(item.id, parseInt(e.target.value) || 1)}
+                    onChange={(e) => setOptionQuantity(item._id, parseInt(e.target.value) || 1)}
                     className="w-20"
                   />
                 )}
@@ -196,29 +169,10 @@ function MultiGroup({
 export function AccessoryPicker() {
   const { selectedCategory } = useConfiguratorStore()
 
-  const groupsWithOptions = useLiveQuery(
-    async () => {
-      if (!selectedCategory) return []
-      const categoryId = selectedCategory.toLowerCase()
-      const allGroups = await db.optionGroups.orderBy('sortOrder').toArray()
-      const applicableGroups = allGroups.filter(
-        (g) => g.isActive && (g.appliesTo.length === 0 || g.appliesTo.includes(categoryId)),
-      )
-
-      const result: { group: OptionGroupRecord; items: OptionRecord[] }[] = []
-      for (const group of applicableGroups) {
-        const items = await db.options
-          .where('optionGroupId')
-          .equals(group.id)
-          .sortBy('sortOrder')
-        result.push({ group, items: items.filter((o) => o.isActive) })
-      }
-      return result
-    },
-    [selectedCategory],
+  const groupsWithOptions = useQuery(
+    api.optionGroups.listWithOptionsForCategory,
+    selectedCategory ? { categoryId: selectedCategory } : 'skip',
   )
-
-  const imageUrls = useOptionImageUrls(groupsWithOptions)
 
   if (!selectedCategory || !groupsWithOptions) return null
 
@@ -227,13 +181,13 @@ export function AccessoryPicker() {
       <h2 className="mb-2 text-xl font-semibold">Zubehör & Optionen</h2>
       <p className="mb-6 text-muted-foreground">Passen Sie Ihr Fahrzeug individuell an</p>
       <div className="space-y-6">
-        {groupsWithOptions.map(({ group, items }, idx) => (
-          <div key={group.id}>
+        {(groupsWithOptions as any[]).map(({ group, items }: any, idx: number) => (
+          <div key={group._id}>
             {idx > 0 && <Separator className="mb-6" />}
             {group.selectionType === 'SINGLE' ? (
-              <SingleGroup group={group} items={items} imageUrls={imageUrls} />
+              <SingleGroup group={group} items={items} />
             ) : (
-              <MultiGroup group={group} items={items} imageUrls={imageUrls} />
+              <MultiGroup group={group} items={items} />
             )}
           </div>
         ))}

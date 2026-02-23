@@ -1,14 +1,17 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { documentRepo } from '@/modules/storage'
-import type { DocumentRecord } from '@/modules/storage/types'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../../convex/_generated/api'
+import { useConfiguratorStore } from '@/modules/configurator'
 import { DocumentPreview } from '@/components/documents/document-preview'
+import { VersionHistory } from '@/components/documents/version-history'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { ArrowLeft, Download, FileText, Mail, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Download, FileText, Mail, CheckCircle, Pencil } from 'lucide-react'
 import { SendEmailDialog } from '@/components/documents/send-email-dialog'
+import type { BlankPdfCatalogData } from '@/modules/pdf/blank-generator'
 
 function downloadPdf(bytes: Uint8Array, filename: string) {
   const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
@@ -23,31 +26,27 @@ function downloadPdf(bytes: Uint8Array, filename: string) {
 export default function DocumentPage() {
   const params = useParams()
   const router = useRouter()
-  const [doc, setDoc] = useState<DocumentRecord | null>(null)
-  const [loading, setLoading] = useState(true)
   const [showEmailDialog, setShowEmailDialog] = useState(false)
+  const loadFromDocument = useConfiguratorStore((s) => s.loadFromDocument)
 
-  const loadDocument = useCallback(async () => {
-    const id = Number(params.id)
-    if (isNaN(id)) {
-      setLoading(false)
-      return
-    }
-    const record = await documentRepo.getById(id)
-    setDoc(record ?? null)
-    setLoading(false)
-  }, [params.id])
+  const documentId = params.id as string
+  const doc = useQuery(
+    api.documents.getById,
+    documentId ? { id: documentId as any } : 'skip',
+  )
+  const updateStatus = useMutation(api.documents.updateStatus)
 
-  useEffect(() => {
-    loadDocument()
-  }, [loadDocument])
+  // Catalog data for blank PDF generation
+  const allBaseModels = useQuery(api.baseModels.list)
+  const allOptionGroups = useQuery(api.optionGroups.list)
+  const allOptions = useQuery(api.options.list)
 
   async function handleDownloadPdf() {
     if (!doc) return
     try {
       const { generateDocumentPdf } = await import('@/modules/pdf')
-      const bytes = await generateDocumentPdf(doc)
-      downloadPdf(bytes, `${doc.document_no}.pdf`)
+      const bytes = await generateDocumentPdf(doc as any)
+      downloadPdf(bytes, `${doc.documentNo}.pdf`)
       toast.success('PDF heruntergeladen')
     } catch (err) {
       toast.error('PDF-Erstellung fehlgeschlagen')
@@ -56,11 +55,43 @@ export default function DocumentPage() {
   }
 
   async function handleDownloadBlankPdf() {
-    if (!doc) return
+    if (!doc || !allBaseModels || !allOptionGroups || !allOptions) return
     try {
       const { generateBlankFormPdf } = await import('@/modules/pdf/blank-generator')
-      const bytes = await generateBlankFormPdf(doc.selectedCategory.toLowerCase())
-      downloadPdf(bytes, `Blanko-${doc.selectedCategory}.pdf`)
+
+      const catalogData: BlankPdfCatalogData = {
+        baseModels: (allBaseModels as any[])
+          .filter((m: any) => m.categoryId === doc.selectedCategory)
+          .map((m: any) => ({
+            articleNo: m.articleNo,
+            name: m.name,
+            priceNet: m.priceNet,
+            priceGross: m.priceGross,
+            isActive: m.isActive,
+            sortOrder: m.sortOrder,
+          })),
+        optionGroups: (allOptionGroups as any[]).map((g: any) => ({
+          _id: g._id,
+          name: g.name,
+          selectionType: g.selectionType,
+          isActive: g.isActive,
+          sortOrder: g.sortOrder,
+          appliesTo: g.appliesTo ?? [],
+        })),
+        options: (allOptions as any[]).map((o: any) => ({
+          optionGroupId: o.optionGroupId,
+          articleNo: o.articleNo,
+          name: o.name,
+          priceNet: o.priceNet,
+          priceGross: o.priceGross,
+          isDefault: o.isDefault ?? false,
+          isActive: o.isActive,
+          sortOrder: o.sortOrder,
+        })),
+      }
+
+      const bytes = await generateBlankFormPdf(doc.selectedCategory, catalogData)
+      downloadPdf(bytes, `Blanko-${doc.documentNo}.pdf`)
       toast.success('Blanko-PDF heruntergeladen')
     } catch (err) {
       toast.error('PDF-Erstellung fehlgeschlagen')
@@ -70,12 +101,35 @@ export default function DocumentPage() {
 
   async function handleFinalize() {
     if (!doc || doc.status !== 'DRAFT') return
-    await documentRepo.updateStatus(doc.id!, 'FINAL')
-    await loadDocument()
-    toast.success('Dokument finalisiert')
+    try {
+      await updateStatus({ id: doc._id, status: 'FINAL' })
+      toast.success('Dokument finalisiert')
+    } catch {
+      toast.error('Fehler beim Finalisieren')
+    }
   }
 
-  if (loading) {
+  function handleEdit() {
+    if (!doc || doc.status !== 'DRAFT') return
+    // Load document data into configurator store
+    loadFromDocument({
+      _id: doc._id,
+      documentType: doc.documentType as any,
+      selectedCategory: doc.selectedCategory,
+      selectedBaseModelId: doc.selectedBaseModelId,
+      selectedOptions: (doc.selectedOptions as any[]).map((opt: any) => ({
+        optionItemId: opt.optionItemId,
+        skuCode: opt.skuCode,
+        articleNo: opt.articleNo ?? '',
+        name: opt.name ?? '',
+        priceNet: opt.priceNet ?? 0,
+        quantity: opt.quantity,
+      })),
+    })
+    router.push('/new')
+  }
+
+  if (doc === undefined) {
     return (
       <div className="flex items-center justify-center py-20">
         <p className="text-muted-foreground">Laden...</p>
@@ -83,13 +137,13 @@ export default function DocumentPage() {
     )
   }
 
-  if (!doc) {
+  if (doc === null) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-8 md:px-6">
         <p className="text-muted-foreground">Dokument nicht gefunden.</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push('/')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Zurück
+          Zurueck
         </Button>
       </div>
     )
@@ -103,6 +157,12 @@ export default function DocumentPage() {
           Dashboard
         </Button>
         <div className="flex flex-wrap gap-2">
+          {doc.status === 'DRAFT' && (
+            <Button variant="outline" size="sm" onClick={handleEdit}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Bearbeiten
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={handleDownloadPdf}>
             <Download className="mr-2 h-4 w-4" />
             PDF
@@ -124,13 +184,15 @@ export default function DocumentPage() {
         </div>
       </div>
 
-      <DocumentPreview document={doc} />
+      <div className="space-y-6">
+        <DocumentPreview document={doc as any} />
+        <VersionHistory documentId={documentId} />
+      </div>
 
       <SendEmailDialog
         open={showEmailDialog}
         onOpenChange={setShowEmailDialog}
-        document={doc}
-        onSent={loadDocument}
+        document={doc as any}
       />
     </div>
   )

@@ -1,5 +1,4 @@
-import type { SelectedOption, LineItem, PricingSummary } from '@/modules/storage/types'
-import { db } from '@/modules/storage/db'
+import type { LineItem, PricingSummary } from '@/modules/storage/types'
 
 const VAT_RATE = 0.19
 
@@ -51,31 +50,4 @@ export function calculatePricingFromItems(
     vatAmount,
     totalGross,
   }
-}
-
-/**
- * Async pricing calculation that resolves options from IndexedDB.
- */
-export async function calculatePricingAsync(
-  baseModelId: string,
-  selectedOptions: SelectedOption[],
-): Promise<PricingSummary | null> {
-  const baseModel = await db.baseModels.get(baseModelId)
-  if (!baseModel) return null
-
-  const optionItems: Array<PricingItem & { quantity: number }> = []
-  for (const opt of selectedOptions) {
-    const option = await db.options.where('skuCode').equals(opt.skuCode).first()
-    if (option) {
-      optionItems.push({
-        skuCode: option.skuCode,
-        articleNo: option.articleNo,
-        name: option.name,
-        priceNet: option.priceNet,
-        quantity: opt.quantity || 1,
-      })
-    }
-  }
-
-  return calculatePricingFromItems(baseModel, optionItems)
 }

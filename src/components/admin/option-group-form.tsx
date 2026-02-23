@@ -1,10 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/modules/storage/db'
-import { optionGroupRepo } from '@/modules/storage'
-import type { OptionGroupRecord } from '@/modules/catalog/db-types'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import {
   Sheet,
   SheetContent,
@@ -22,10 +20,15 @@ import { toast } from 'sonner'
 interface OptionGroupFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  group?: OptionGroupRecord
+  groupId?: string
 }
 
-export function OptionGroupForm({ open, onOpenChange, group }: OptionGroupFormProps) {
+export function OptionGroupForm({ open, onOpenChange, groupId }: OptionGroupFormProps) {
+  const group = useQuery(api.optionGroups.getById, groupId ? { id: groupId as any } : 'skip')
+  const categories = useQuery(api.categories.list)
+  const createGroup = useMutation(api.optionGroups.create)
+  const updateGroup = useMutation(api.optionGroups.update)
+
   const [name, setName] = useState('')
   const [selectionType, setSelectionType] = useState<'SINGLE' | 'MULTI'>('SINGLE')
   const [appliesTo, setAppliesTo] = useState<string[]>([])
@@ -33,20 +36,18 @@ export function OptionGroupForm({ open, onOpenChange, group }: OptionGroupFormPr
   const [isActive, setIsActive] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  const categories = useLiveQuery(() => db.categories.orderBy('sortOrder').toArray())
-
-  const isEdit = !!group
+  const isEdit = !!groupId
 
   // Reset form when sheet opens or group changes
   useEffect(() => {
     if (open) {
       if (group) {
         setName(group.name)
-        setSelectionType(group.selectionType)
+        setSelectionType(group.selectionType as 'SINGLE' | 'MULTI')
         setAppliesTo([...group.appliesTo])
         setSortOrder(group.sortOrder)
         setIsActive(group.isActive)
-      } else {
+      } else if (!groupId) {
         setName('')
         setSelectionType('SINGLE')
         setAppliesTo([])
@@ -54,7 +55,7 @@ export function OptionGroupForm({ open, onOpenChange, group }: OptionGroupFormPr
         setIsActive(true)
       }
     }
-  }, [open, group])
+  }, [open, group, groupId])
 
   function toggleCategory(categoryId: string) {
     setAppliesTo((prev) =>
@@ -75,16 +76,26 @@ export function OptionGroupForm({ open, onOpenChange, group }: OptionGroupFormPr
 
     setSaving(true)
     try {
-      const record: OptionGroupRecord = {
-        id: group?.id ?? crypto.randomUUID(),
-        name: trimmedName,
-        selectionType,
-        appliesTo,
-        sortOrder,
-        isActive,
+      if (isEdit && groupId) {
+        await updateGroup({
+          id: groupId as any,
+          name: trimmedName,
+          selectionType,
+          appliesTo,
+          sortOrder,
+          isActive,
+        })
+        toast.success('Optionsgruppe aktualisiert.')
+      } else {
+        await createGroup({
+          name: trimmedName,
+          selectionType,
+          appliesTo,
+          sortOrder,
+          isActive,
+        })
+        toast.success('Optionsgruppe erstellt.')
       }
-      await optionGroupRepo.upsert(record)
-      toast.success(isEdit ? 'Optionsgruppe aktualisiert.' : 'Optionsgruppe erstellt.')
       onOpenChange(false)
     } catch (err) {
       console.error('Failed to save option group:', err)
@@ -164,16 +175,16 @@ export function OptionGroupForm({ open, onOpenChange, group }: OptionGroupFormPr
               Keine Auswahl = gilt f&uuml;r alle Kategorien.
             </p>
             <div className="space-y-1.5 rounded-md border p-3 max-h-40 overflow-y-auto">
-              {categories && categories.length > 0 ? (
-                categories.map((cat) => (
+              {categories && (categories as any[]).length > 0 ? (
+                (categories as any[]).map((cat: any) => (
                   <label
-                    key={cat.id}
+                    key={cat._id}
                     className="flex items-center gap-2 text-sm cursor-pointer"
                   >
                     <input
                       type="checkbox"
-                      checked={appliesTo.includes(cat.id)}
-                      onChange={() => toggleCategory(cat.id)}
+                      checked={appliesTo.includes(cat._id)}
+                      onChange={() => toggleCategory(cat._id)}
                       className="accent-primary h-4 w-4 rounded"
                     />
                     {cat.name}

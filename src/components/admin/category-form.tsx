@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { categoryRepo } from '@/modules/storage'
-import type { CategoryRecord } from '@/modules/catalog/db-types'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { ImageUpload } from '@/components/admin/image-upload'
 import {
   Sheet,
@@ -21,17 +21,21 @@ import { toast } from 'sonner'
 interface CategoryFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  category?: CategoryRecord
+  categoryId?: string
 }
 
-export function CategoryForm({ open, onOpenChange, category }: CategoryFormProps) {
+export function CategoryForm({ open, onOpenChange, categoryId }: CategoryFormProps) {
+  const category = useQuery(api.categories.getById, categoryId ? { id: categoryId as any } : 'skip')
+  const createCategory = useMutation(api.categories.create)
+  const updateCategory = useMutation(api.categories.update)
+
   const [name, setName] = useState('')
   const [sortOrder, setSortOrder] = useState(0)
   const [isActive, setIsActive] = useState(true)
-  const [imageBlob, setImageBlob] = useState<Blob | undefined>(undefined)
+  const [imageStorageId, setImageStorageId] = useState<string | undefined>(undefined)
   const [saving, setSaving] = useState(false)
 
-  const isEdit = !!category
+  const isEdit = !!categoryId
 
   // Reset form when sheet opens or category changes
   useEffect(() => {
@@ -40,15 +44,15 @@ export function CategoryForm({ open, onOpenChange, category }: CategoryFormProps
         setName(category.name)
         setSortOrder(category.sortOrder)
         setIsActive(category.isActive)
-        setImageBlob(category.imageBlob)
-      } else {
+        setImageStorageId(category.imageStorageId)
+      } else if (!categoryId) {
         setName('')
         setSortOrder(0)
         setIsActive(true)
-        setImageBlob(undefined)
+        setImageStorageId(undefined)
       }
     }
-  }, [open, category])
+  }, [open, category, categoryId])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -61,15 +65,33 @@ export function CategoryForm({ open, onOpenChange, category }: CategoryFormProps
 
     setSaving(true)
     try {
-      const record: CategoryRecord = {
-        id: category?.id ?? crypto.randomUUID(),
-        name: trimmedName,
-        sortOrder,
-        isActive,
-        imageBlob,
+      if (isEdit && categoryId) {
+        const updateArgs: any = {
+          id: categoryId,
+          name: trimmedName,
+          sortOrder,
+          isActive,
+        }
+        if (imageStorageId) {
+          updateArgs.imageStorageId = imageStorageId
+        } else if (category?.imageStorageId && !imageStorageId) {
+          // Image was removed
+          updateArgs.removeImage = true
+        }
+        await updateCategory(updateArgs)
+        toast.success('Kategorie aktualisiert.')
+      } else {
+        const createArgs: any = {
+          name: trimmedName,
+          sortOrder,
+          isActive,
+        }
+        if (imageStorageId) {
+          createArgs.imageStorageId = imageStorageId
+        }
+        await createCategory(createArgs)
+        toast.success('Kategorie erstellt.')
       }
-      await categoryRepo.upsert(record)
-      toast.success(isEdit ? 'Kategorie aktualisiert.' : 'Kategorie erstellt.')
       onOpenChange(false)
     } catch (err) {
       console.error('Failed to save category:', err)
@@ -125,7 +147,7 @@ export function CategoryForm({ open, onOpenChange, category }: CategoryFormProps
 
           <div className="space-y-2">
             <Label>Bild</Label>
-            <ImageUpload value={imageBlob} onChange={setImageBlob} />
+            <ImageUpload storageId={imageStorageId} onChange={setImageStorageId} />
           </div>
         </form>
 

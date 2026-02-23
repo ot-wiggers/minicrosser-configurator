@@ -1,49 +1,78 @@
 'use client'
 
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { useConfiguratorStore } from '@/modules/configurator'
-import type { VariantCategory } from '@/modules/catalog/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { Bike, Car, Weight, Home } from 'lucide-react'
+import { Bike, Car, Weight, Home, type LucideIcon, Package } from 'lucide-react'
 
-const categories: {
-  value: VariantCategory
-  label: string
-  description: string
-  icon: typeof Bike
-}[] = [
-  { value: 'TRIKE', label: 'Dreirad', description: 'Wendig und kompakt', icon: Bike },
-  { value: 'QUAD', label: 'Vierrad', description: 'Stabil für jedes Gelände', icon: Car },
-  { value: 'HD', label: 'Heavy-Duty', description: 'Bis 300 kg Belastung', icon: Weight },
-  { value: 'CABIN', label: 'Kabine', description: 'Wetterfest und geschützt', icon: Home },
-]
+// Map category names to icons for visual flair
+const ICON_MAP: Record<string, LucideIcon> = {
+  dreirad: Bike,
+  trike: Bike,
+  vierrad: Car,
+  quad: Car,
+  'heavy-duty': Weight,
+  hd: Weight,
+  kabine: Home,
+  cabin: Home,
+}
+
+function getIconForCategory(name: string): LucideIcon {
+  const lower = name.toLowerCase()
+  for (const [key, icon] of Object.entries(ICON_MAP)) {
+    if (lower.includes(key)) return icon
+  }
+  return Package
+}
 
 export function CategoryPicker() {
   const { selectedCategory, setCategory } = useConfiguratorStore()
+  const categories = useQuery(api.categories.listActive)
+
+  if (!categories) {
+    return (
+      <div>
+        <h2 className="mb-2 text-xl font-semibold">Kategorie wählen</h2>
+        <p className="text-muted-foreground">Lade Kategorien...</p>
+      </div>
+    )
+  }
 
   return (
     <div>
       <h2 className="mb-2 text-xl font-semibold">Kategorie wählen</h2>
       <p className="mb-6 text-muted-foreground">Welcher Fahrzeugtyp passt am besten?</p>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {categories.map((cat) => (
-          <Card
-            key={cat.value}
-            className={cn(
-              'cursor-pointer transition-all hover:border-primary/50 hover:shadow-md',
-              selectedCategory === cat.value && 'border-primary ring-2 ring-primary/20',
-            )}
-            onClick={() => setCategory(cat.value)}
-          >
-            <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
-              <cat.icon className="h-10 w-10 text-primary" />
-              <div>
-                <p className="font-semibold">{cat.label}</p>
-                <p className="text-sm text-muted-foreground">{cat.description}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {(categories as any[]).map((cat: any) => {
+          const Icon = getIconForCategory(cat.name)
+          return (
+            <Card
+              key={cat._id}
+              className={cn(
+                'cursor-pointer transition-all hover:border-primary/50 hover:shadow-md',
+                selectedCategory === cat._id && 'border-primary ring-2 ring-primary/20',
+              )}
+              onClick={() => setCategory(cat._id)}
+            >
+              <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
+                {cat.imageUrl ? (
+                  <img
+                    src={cat.imageUrl}
+                    alt={cat.name}
+                    className="h-10 w-10 rounded object-cover"
+                  />
+                ) : (
+                  <Icon className="h-10 w-10 text-primary" />
+                )}
+                <div>
+                  <p className="font-semibold">{cat.name}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     </div>
   )

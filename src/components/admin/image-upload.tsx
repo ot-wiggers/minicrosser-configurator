@@ -1,36 +1,44 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ImageIcon, X } from 'lucide-react'
+import { useCallback, useRef, useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
+import { ImageIcon, X, Loader2 } from 'lucide-react'
 
 interface ImageUploadProps {
-  value?: Blob
-  onChange: (blob: Blob | undefined) => void
+  storageId?: string
+  onChange: (storageId: string | undefined) => void
   label?: string
 }
 
-export function ImageUpload({ value, onChange, label = 'Bild hochladen' }: ImageUploadProps) {
+export function ImageUpload({ storageId, onChange, label = 'Bild hochladen' }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
-
-  const preview = useMemo(() => {
-    if (!value) return null
-    return URL.createObjectURL(value)
-  }, [value])
-
-  useEffect(() => {
-    return () => {
-      if (preview) URL.revokeObjectURL(preview)
-    }
-  }, [preview])
+  const [uploading, setUploading] = useState(false)
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl)
+  const imageUrl = useQuery(api.files.getUrl, storageId ? { storageId: storageId as any } : 'skip')
 
   const handleFile = useCallback(
-    (file: File) => {
-      if (file.type.startsWith('image/')) {
-        onChange(file)
+    async (file: File) => {
+      if (!file.type.startsWith('image/')) return
+
+      setUploading(true)
+      try {
+        const uploadUrl = await generateUploadUrl()
+        const result = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': file.type },
+          body: file,
+        })
+        const { storageId: newStorageId } = await result.json()
+        onChange(newStorageId)
+      } catch (err) {
+        console.error('Failed to upload image:', err)
+      } finally {
+        setUploading(false)
       }
     },
-    [onChange],
+    [generateUploadUrl, onChange],
   )
 
   function handleDrop(e: React.DragEvent) {
@@ -43,15 +51,22 @@ export function ImageUpload({ value, onChange, label = 'Bild hochladen' }: Image
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) handleFile(file)
-    // Reset input so same file can be re-selected
     e.target.value = ''
   }
 
-  if (preview) {
+  if (uploading) {
+    return (
+      <div className="flex h-24 w-24 items-center justify-center rounded-md border">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (imageUrl) {
     return (
       <div className="relative inline-block">
         <img
-          src={preview}
+          src={imageUrl}
           alt="Vorschau"
           className="h-24 w-24 rounded-md border object-cover"
         />

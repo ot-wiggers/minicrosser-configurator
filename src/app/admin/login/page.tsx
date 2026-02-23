@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useMutation } from 'convex/react'
+import { api } from '../../../../convex/_generated/api'
 import { useAuthStore } from '@/modules/auth/auth-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,7 +13,9 @@ import { Lock } from 'lucide-react'
 
 export default function AdminLoginPage() {
   const router = useRouter()
-  const { login, isAuthenticated, mustChangePassword, changePassword } = useAuthStore()
+  const { isAuthenticated, user, setSession, setMustChangePassword } = useAuthStore()
+  const loginAdmin = useMutation(api.auth.loginAdmin)
+  const changePasswordMutation = useMutation(api.auth.changePassword)
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -28,18 +32,20 @@ export default function AdminLoginPage() {
     setLoading(true)
 
     try {
-      const success = await login(username, password)
-      if (success) {
-        // If mustChangePassword, the form will re-render to show change form
-        // Otherwise redirect to admin
-        if (!useAuthStore.getState().mustChangePassword) {
-          router.push('/admin')
-        }
-      } else {
-        setError('Benutzername oder Passwort falsch')
+      const result = await loginAdmin({ username, password })
+      setSession(result.token, {
+        id: result.user.id,
+        name: result.user.name,
+        username: result.user.username ?? undefined,
+        role: result.user.role as 'admin' | 'employee',
+        mustChangePassword: result.user.mustChangePassword,
+      })
+
+      if (!result.user.mustChangePassword) {
+        router.push('/admin')
       }
-    } catch {
-      setError('Anmeldung fehlgeschlagen')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Anmeldung fehlgeschlagen')
     } finally {
       setLoading(false)
     }
@@ -60,21 +66,25 @@ export default function AdminLoginPage() {
 
     setLoading(true)
     try {
-      const success = await changePassword(newPassword)
-      if (success) {
-        router.push('/admin')
-      } else {
-        setError('Passwortänderung fehlgeschlagen')
-      }
-    } catch {
-      setError('Passwortänderung fehlgeschlagen')
+      const token = useAuthStore.getState().token
+      if (!token) throw new Error('Nicht authentifiziert')
+
+      await changePasswordMutation({
+        token,
+        currentPassword: password,
+        newPassword,
+      })
+      setMustChangePassword(false)
+      router.push('/admin')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Passwortänderung fehlgeschlagen')
     } finally {
       setLoading(false)
     }
   }
 
   // Show password change form after successful login with mustChangePassword
-  if (isAuthenticated && mustChangePassword) {
+  if (isAuthenticated && user?.mustChangePassword) {
     return (
       <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-4">
         <Card className="w-full max-w-sm">

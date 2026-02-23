@@ -4,24 +4,38 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { DocumentList } from '@/components/documents/document-list'
 import { BlankPdfButtons } from '@/components/dashboard/blank-pdf-buttons'
+import { EmployeeLogin } from '@/components/auth/employee-login'
 import { useConfiguratorStore } from '@/modules/configurator'
-import { FilePlus2, ShoppingCart } from 'lucide-react'
+import { useAuthStore } from '@/modules/auth/auth-store'
+import { FilePlus2, ShoppingCart, LogOut } from 'lucide-react'
 
 export default function DashboardPage() {
   const { setDocumentType, reset } = useConfiguratorStore()
+  const { isAuthenticated, user, clearSession } = useAuthStore()
 
   function handleNew(type: 'QUOTE' | 'ORDER') {
     reset()
     setDocumentType(type)
   }
 
+  // Show employee login if not authenticated
+  if (!isAuthenticated || !user) {
+    return <EmployeeLogin />
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 md:px-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="mt-1 text-muted-foreground">
-          Mini Crosser Angebots- &amp; Bestellkonfigurator
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-muted-foreground">
+            Willkommen, {user.name}
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={clearSession}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Abmelden
+        </Button>
       </div>
 
       <div className="mb-8 grid grid-cols-2 gap-4">

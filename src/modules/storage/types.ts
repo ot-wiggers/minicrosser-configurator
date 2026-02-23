@@ -1,5 +1,3 @@
-import type { VariantCategory } from '@/modules/catalog/types'
-
 export type DocumentType = 'QUOTE' | 'ORDER'
 export type DocumentStatus = 'DRAFT' | 'FINAL' | 'SENT'
 export type OutboxStatus = 'PENDING' | 'SENT' | 'FAILED'
@@ -7,6 +5,9 @@ export type OutboxStatus = 'PENDING' | 'SENT' | 'FAILED'
 export interface SelectedOption {
   optionItemId: string
   skuCode: string
+  articleNo: string
+  name: string
+  priceNet: number
   quantity: number
 }
 
@@ -47,7 +48,7 @@ export interface DocumentRecord {
   status: DocumentStatus
   customer: CustomerData
   pricing: PricingSummary
-  selectedCategory: VariantCategory
+  selectedCategory: string
   selectedBaseModelId: string
   selectedOptions: SelectedOption[]
   notes?: string

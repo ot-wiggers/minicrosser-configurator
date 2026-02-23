@@ -1,6 +1,5 @@
 'use client'
 
-import type { DocumentRecord } from '@/modules/storage/types'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -32,7 +31,37 @@ const typeLabel: Record<string, string> = {
 }
 
 interface DocumentPreviewProps {
-  document: DocumentRecord
+  document: {
+    documentType: string
+    documentNo: string
+    status: string
+    _creationTime: number
+    customer: {
+      company: string
+      firstName: string
+      lastName: string
+      street: string
+      zip: string
+      city: string
+      email: string
+      phone?: string
+      contactPerson?: string
+      customerNumber?: string
+    }
+    pricing: {
+      lineItems: Array<{
+        articleNo: string
+        name: string
+        quantity: number
+        unitPriceNet: number
+        totalNet: number
+      }>
+      totalNet: number
+      vatAmount: number
+      totalGross: number
+    }
+    notes?: string
+  }
 }
 
 export function DocumentPreview({ document: doc }: DocumentPreviewProps) {
@@ -42,11 +71,13 @@ export function DocumentPreview({ document: doc }: DocumentPreviewProps) {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold">{typeLabel[doc.document_type]}</h2>
+            <h2 className="text-2xl font-bold">{typeLabel[doc.documentType]}</h2>
             <Badge variant={statusVariant[doc.status]}>{statusLabel[doc.status]}</Badge>
           </div>
-          <p className="mt-1 font-mono text-lg text-muted-foreground">{doc.document_no}</p>
-          <p className="text-sm text-muted-foreground">{formatDate(doc.created_at)}</p>
+          <p className="mt-1 font-mono text-lg text-muted-foreground">{doc.documentNo}</p>
+          <p className="text-sm text-muted-foreground">
+            {formatDate(new Date(doc._creationTime).toISOString())}
+          </p>
         </div>
       </div>
 

@@ -1,25 +1,10 @@
 'use client'
 
-import { useCatalogInit } from '@/modules/catalog/use-catalog-init'
-
+/**
+ * CatalogProvider — previously blocked rendering until Dexie was seeded from catalog.json.
+ * With Convex as the source of truth, this is now a simple passthrough.
+ * Kept for compatibility; will be removed in Phase 8 cleanup.
+ */
 export function CatalogProvider({ children }: { children: React.ReactNode }) {
-  const { isReady, error } = useCatalogInit()
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-red-500">Fehler beim Laden des Katalogs: {error}</p>
-      </div>
-    )
-  }
-
-  if (!isReady) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Katalog wird geladen...</p>
-      </div>
-    )
-  }
-
   return <>{children}</>
 }

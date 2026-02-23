@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/modules/storage/db'
-import { optionRepo } from '@/modules/storage'
-import type { OptionRecord } from '@/modules/catalog/db-types'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { ImageUpload } from '@/components/admin/image-upload'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
@@ -18,19 +16,22 @@ import { toast } from 'sonner'
 interface OptionFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  option?: OptionRecord
+  optionId?: string
 }
 
 const VAT_RATE = 1.19
 
 function OptionFormInner({
   onOpenChange,
-  option,
+  optionId,
 }: {
   onOpenChange: (open: boolean) => void
-  option?: OptionRecord
+  optionId?: string
 }) {
-  const optionGroups = useLiveQuery(() => db.optionGroups.orderBy('sortOrder').toArray())
+  const option = useQuery(api.options.getById, optionId ? { id: optionId as any } : 'skip')
+  const optionGroups = useQuery(api.optionGroups.list)
+  const createOption = useMutation(api.options.create)
+  const updateOption = useMutation(api.options.update)
 
   const [optionGroupId, setOptionGroupId] = useState(option?.optionGroupId ?? '')
   const [skuCode, setSkuCode] = useState(option?.skuCode ?? '')
@@ -43,7 +44,7 @@ function OptionFormInner({
   const [sortOrder, setSortOrder] = useState(option ? String(option.sortOrder) : '0')
   const [isActive, setIsActive] = useState(option?.isActive ?? true)
   const [isDefault, setIsDefault] = useState(option?.isDefault ?? false)
-  const [imageBlob, setImageBlob] = useState<Blob | undefined>(option?.imageBlob)
+  const [imageStorageId, setImageStorageId] = useState<string | undefined>(option?.imageStorageId as string | undefined)
 
   function handlePriceNetChange(value: string) {
     setPriceNet(value)
@@ -79,24 +80,47 @@ function OptionFormInner({
       return
     }
 
-    const record: OptionRecord = {
-      id: option?.id ?? crypto.randomUUID(),
-      optionGroupId,
-      skuCode: skuCode.trim(),
-      articleNo: articleNo.trim(),
-      name: name.trim(),
-      description: description.trim() || undefined,
-      priceNet: netVal,
-      priceGross: grossVal,
-      imageBlob,
-      sortOrder: parseInt(sortOrder, 10) || 0,
-      isActive,
-      isDefault,
-    }
-
     try {
-      await optionRepo.upsert(record)
-      toast.success(option ? 'Option aktualisiert.' : 'Option erstellt.')
+      if (optionId) {
+        const updateArgs: any = {
+          id: optionId,
+          optionGroupId,
+          skuCode: skuCode.trim(),
+          articleNo: articleNo.trim(),
+          name: name.trim(),
+          description: description.trim() || undefined,
+          priceNet: netVal,
+          priceGross: grossVal,
+          sortOrder: parseInt(sortOrder, 10) || 0,
+          isActive,
+          isDefault,
+        }
+        if (imageStorageId) {
+          updateArgs.imageStorageId = imageStorageId
+        } else if (option?.imageStorageId && !imageStorageId) {
+          updateArgs.removeImage = true
+        }
+        await updateOption(updateArgs)
+        toast.success('Option aktualisiert.')
+      } else {
+        const createArgs: any = {
+          optionGroupId,
+          skuCode: skuCode.trim(),
+          articleNo: articleNo.trim(),
+          name: name.trim(),
+          description: description.trim() || undefined,
+          priceNet: netVal,
+          priceGross: grossVal,
+          sortOrder: parseInt(sortOrder, 10) || 0,
+          isActive,
+          isDefault,
+        }
+        if (imageStorageId) {
+          createArgs.imageStorageId = imageStorageId
+        }
+        await createOption(createArgs)
+        toast.success('Option erstellt.')
+      }
       onOpenChange(false)
     } catch {
       toast.error('Fehler beim Speichern.')
@@ -106,7 +130,7 @@ function OptionFormInner({
   return (
     <>
       <SheetHeader>
-        <SheetTitle>{option ? 'Option bearbeiten' : 'Neue Option'}</SheetTitle>
+        <SheetTitle>{optionId ? 'Option bearbeiten' : 'Neue Option'}</SheetTitle>
       </SheetHeader>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-4">
@@ -118,8 +142,8 @@ function OptionFormInner({
               <SelectValue placeholder="Gruppe auswahlen..." />
             </SelectTrigger>
             <SelectContent>
-              {optionGroups?.map((g) => (
-                <SelectItem key={g.id} value={g.id}>
+              {optionGroups && (optionGroups as any[]).map((g: any) => (
+                <SelectItem key={g._id} value={g._id}>
                   {g.name}
                 </SelectItem>
               ))}
@@ -228,27 +252,27 @@ function OptionFormInner({
         {/* Image */}
         <div className="space-y-2">
           <Label>Bild (optional)</Label>
-          <ImageUpload value={imageBlob} onChange={setImageBlob} />
+          <ImageUpload storageId={imageStorageId} onChange={setImageStorageId} />
         </div>
 
         {/* Submit */}
         <Button type="submit" className="mt-2 w-full">
-          {option ? 'Speichern' : 'Erstellen'}
+          {optionId ? 'Speichern' : 'Erstellen'}
         </Button>
       </form>
     </>
   )
 }
 
-export function OptionForm({ open, onOpenChange, option }: OptionFormProps) {
+export function OptionForm({ open, onOpenChange, optionId }: OptionFormProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="overflow-y-auto sm:max-w-lg">
         {open && (
           <OptionFormInner
-            key={option?.id ?? 'new'}
+            key={optionId ?? 'new'}
             onOpenChange={onOpenChange}
-            option={option}
+            optionId={optionId}
           />
         )}
       </SheetContent>

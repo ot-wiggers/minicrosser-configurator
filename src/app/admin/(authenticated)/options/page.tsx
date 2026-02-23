@@ -1,10 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/modules/storage/db'
-import { optionRepo } from '@/modules/storage'
-import type { OptionRecord } from '@/modules/catalog/db-types'
+import { useState, useMemo } from 'react'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../../../convex/_generated/api'
 import { OptionForm } from '@/components/admin/option-form'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -17,78 +15,45 @@ import { formatCurrency } from '@/lib/utils'
 const ALL_GROUPS = '__all__'
 
 export default function OptionsPage() {
-  const options = useLiveQuery(() => db.options.orderBy('sortOrder').toArray())
-  const optionGroups = useLiveQuery(() => db.optionGroups.orderBy('sortOrder').toArray())
+  const options = useQuery(api.options.list)
+  const optionGroups = useQuery(api.optionGroups.list)
+  const removeOption = useMutation(api.options.remove)
 
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [editingOption, setEditingOption] = useState<OptionRecord | undefined>(undefined)
+  const [editingOptionId, setEditingOptionId] = useState<string | undefined>(undefined)
   const [filterGroupId, setFilterGroupId] = useState(ALL_GROUPS)
 
   // Build a lookup map for group names
   const groupMap = useMemo(() => {
     const map = new Map<string, string>()
-    optionGroups?.forEach((g) => map.set(g.id, g.name))
+    if (optionGroups) {
+      for (const g of optionGroups as any[]) {
+        map.set(g._id, g.name)
+      }
+    }
     return map
   }, [optionGroups])
 
-  // Build image URL cache for table thumbnails
-  const [imagePreviews, setImagePreviews] = useState<Map<string, string>>(new Map())
-
-  useEffect(() => {
-    if (!options) return
-
-    const newPreviews = new Map<string, string>()
-    const toRevoke: string[] = []
-
-    options.forEach((opt) => {
-      if (opt.imageBlob) {
-        // Re-use existing URL if same option already has one
-        const existing = imagePreviews.get(opt.id)
-        if (existing) {
-          newPreviews.set(opt.id, existing)
-        } else {
-          newPreviews.set(opt.id, URL.createObjectURL(opt.imageBlob))
-        }
-      }
-    })
-
-    // Revoke URLs that are no longer needed
-    imagePreviews.forEach((url, id) => {
-      if (!newPreviews.has(id)) {
-        toRevoke.push(url)
-      }
-    })
-    toRevoke.forEach((url) => URL.revokeObjectURL(url))
-
-    setImagePreviews(newPreviews)
-
-    return () => {
-      // Cleanup on unmount
-      newPreviews.forEach((url) => URL.revokeObjectURL(url))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options])
-
   const filteredOptions = useMemo(() => {
     if (!options) return []
-    if (filterGroupId === ALL_GROUPS) return options
-    return options.filter((o) => o.optionGroupId === filterGroupId)
+    if (filterGroupId === ALL_GROUPS) return options as any[]
+    return (options as any[]).filter((o: any) => o.optionGroupId === filterGroupId)
   }, [options, filterGroupId])
 
   function handleNew() {
-    setEditingOption(undefined)
+    setEditingOptionId(undefined)
     setSheetOpen(true)
   }
 
-  function handleEdit(opt: OptionRecord) {
-    setEditingOption(opt)
+  function handleEdit(optionId: string) {
+    setEditingOptionId(optionId)
     setSheetOpen(true)
   }
 
-  async function handleDelete(opt: OptionRecord) {
+  async function handleDelete(opt: any) {
     if (!confirm(`Option "${opt.name}" wirklich loschen?`)) return
     try {
-      await optionRepo.delete(opt.id)
+      await removeOption({ id: opt._id })
       toast.success('Option geloscht.')
     } catch {
       toast.error('Fehler beim Loschen.')
@@ -116,8 +81,8 @@ export default function OptionsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL_GROUPS}>Alle Gruppen</SelectItem>
-            {optionGroups?.map((g) => (
-              <SelectItem key={g.id} value={g.id}>
+            {optionGroups && (optionGroups as any[]).map((g: any) => (
+              <SelectItem key={g._id} value={g._id}>
                 {g.name}
               </SelectItem>
             ))}
@@ -148,13 +113,12 @@ export default function OptionsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredOptions.map((opt) => (
-                <TableRow key={opt.id}>
-                  {/* Image thumbnail */}
+              filteredOptions.map((opt: any) => (
+                <TableRow key={opt._id}>
                   <TableCell>
-                    {imagePreviews.get(opt.id) ? (
+                    {opt.imageUrl ? (
                       <img
-                        src={imagePreviews.get(opt.id)}
+                        src={opt.imageUrl}
                         alt={opt.name}
                         className="h-8 w-8 rounded object-cover"
                       />
@@ -162,22 +126,12 @@ export default function OptionsPage() {
                       <div className="h-8 w-8 rounded bg-muted" />
                     )}
                   </TableCell>
-
-                  {/* Name */}
                   <TableCell className="font-medium">{opt.name}</TableCell>
-
-                  {/* Group name */}
                   <TableCell className="text-muted-foreground">
                     {groupMap.get(opt.optionGroupId) ?? '-'}
                   </TableCell>
-
-                  {/* Article No */}
                   <TableCell className="text-muted-foreground">{opt.articleNo}</TableCell>
-
-                  {/* Price Net */}
                   <TableCell className="text-right">{formatCurrency(opt.priceNet)}</TableCell>
-
-                  {/* Default diamond */}
                   <TableCell className="text-center">
                     {opt.isDefault && (
                       <span className="text-primary" title="Standard-Option">
@@ -185,21 +139,17 @@ export default function OptionsPage() {
                       </span>
                     )}
                   </TableCell>
-
-                  {/* Active badge */}
                   <TableCell className="text-center">
                     <Badge variant={opt.isActive ? 'default' : 'secondary'}>
                       {opt.isActive ? 'Aktiv' : 'Inaktiv'}
                     </Badge>
                   </TableCell>
-
-                  {/* Actions */}
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleEdit(opt)}
+                        onClick={() => handleEdit(opt._id)}
                         title="Bearbeiten"
                       >
                         <Pencil className="h-4 w-4" />
@@ -221,8 +171,7 @@ export default function OptionsPage() {
         </Table>
       </div>
 
-      {/* Option Form Sheet */}
-      <OptionForm open={sheetOpen} onOpenChange={setSheetOpen} option={editingOption} />
+      <OptionForm open={sheetOpen} onOpenChange={setSheetOpen} optionId={editingOptionId} />
     </div>
   )
 }

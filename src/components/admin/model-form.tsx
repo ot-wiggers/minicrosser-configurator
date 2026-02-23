@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/modules/storage/db'
-import { baseModelRepo } from '@/modules/storage'
-import type { BaseModelRecord } from '@/modules/catalog/db-types'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { ImageUpload } from '@/components/admin/image-upload'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
@@ -24,32 +22,22 @@ import { toast } from 'sonner'
 interface ModelFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  model?: BaseModelRecord
+  modelId?: string
 }
 
 const VAT_RATE = 1.19
 
-const emptyForm = {
-  categoryId: '',
-  skuCode: '',
-  articleNo: '',
-  name: '',
-  description: '',
-  priceNet: 0,
-  priceGross: 0,
-  sortOrder: 0,
-  isActive: true,
-  imageBlob: undefined as Blob | undefined,
-}
-
 function ModelFormInner({
   onOpenChange,
-  model,
+  modelId,
 }: {
   onOpenChange: (open: boolean) => void
-  model?: BaseModelRecord
+  modelId?: string
 }) {
-  const categories = useLiveQuery(() => db.categories.orderBy('sortOrder').toArray()) ?? []
+  const model = useQuery(api.baseModels.getById, modelId ? { id: modelId as any } : 'skip')
+  const categories = useQuery(api.categories.list) ?? []
+  const createModel = useMutation(api.baseModels.create)
+  const updateModel = useMutation(api.baseModels.update)
 
   const [form, setForm] = useState(() => {
     if (model) {
@@ -63,10 +51,21 @@ function ModelFormInner({
         priceGross: model.priceGross,
         sortOrder: model.sortOrder,
         isActive: model.isActive,
-        imageBlob: model.imageBlob,
+        imageStorageId: model.imageStorageId as string | undefined,
       }
     }
-    return emptyForm
+    return {
+      categoryId: '',
+      skuCode: '',
+      articleNo: '',
+      name: '',
+      description: '',
+      priceNet: 0,
+      priceGross: 0,
+      sortOrder: 0,
+      isActive: true,
+      imageStorageId: undefined as string | undefined,
+    }
   })
   const [grossOverridden, setGrossOverridden] = useState(() => {
     if (!model) return false
@@ -111,22 +110,44 @@ function ModelFormInner({
     }
 
     try {
-      const record: BaseModelRecord = {
-        id: model?.id ?? crypto.randomUUID(),
-        categoryId: form.categoryId,
-        skuCode: form.skuCode.trim(),
-        articleNo: form.articleNo.trim(),
-        name: form.name.trim(),
-        description: form.description.trim() || undefined,
-        priceNet: form.priceNet,
-        priceGross: form.priceGross,
-        imageBlob: form.imageBlob,
-        sortOrder: form.sortOrder,
-        isActive: form.isActive,
+      if (modelId) {
+        const updateArgs: any = {
+          id: modelId,
+          categoryId: form.categoryId,
+          skuCode: form.skuCode.trim(),
+          articleNo: form.articleNo.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          priceNet: form.priceNet,
+          priceGross: form.priceGross,
+          sortOrder: form.sortOrder,
+          isActive: form.isActive,
+        }
+        if (form.imageStorageId) {
+          updateArgs.imageStorageId = form.imageStorageId
+        } else if (model?.imageStorageId && !form.imageStorageId) {
+          updateArgs.removeImage = true
+        }
+        await updateModel(updateArgs)
+        toast.success('Modell aktualisiert.')
+      } else {
+        const createArgs: any = {
+          categoryId: form.categoryId,
+          skuCode: form.skuCode.trim(),
+          articleNo: form.articleNo.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          priceNet: form.priceNet,
+          priceGross: form.priceGross,
+          sortOrder: form.sortOrder,
+          isActive: form.isActive,
+        }
+        if (form.imageStorageId) {
+          createArgs.imageStorageId = form.imageStorageId
+        }
+        await createModel(createArgs)
+        toast.success('Modell erstellt.')
       }
-
-      await baseModelRepo.upsert(record)
-      toast.success(model ? 'Modell aktualisiert.' : 'Modell erstellt.')
       onOpenChange(false)
     } catch {
       toast.error('Fehler beim Speichern.')
@@ -136,7 +157,7 @@ function ModelFormInner({
   return (
     <>
       <SheetHeader>
-        <SheetTitle>{model ? 'Modell bearbeiten' : 'Neues Modell'}</SheetTitle>
+        <SheetTitle>{modelId ? 'Modell bearbeiten' : 'Neues Modell'}</SheetTitle>
       </SheetHeader>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-4 pb-4">
@@ -148,8 +169,8 @@ function ModelFormInner({
                 <SelectValue placeholder="Kategorie wahlen..." />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
+                {(categories as any[]).map((cat: any) => (
+                  <SelectItem key={cat._id} value={cat._id}>
                     {cat.name}
                   </SelectItem>
                 ))}
@@ -268,29 +289,29 @@ function ModelFormInner({
           <div className="space-y-2">
             <Label>Bild</Label>
             <ImageUpload
-              value={form.imageBlob}
-              onChange={(blob) => updateField('imageBlob', blob)}
+              storageId={form.imageStorageId}
+              onChange={(id) => updateField('imageStorageId', id)}
             />
           </div>
 
           {/* Submit */}
           <Button type="submit" className="mt-2">
-            {model ? 'Speichern' : 'Erstellen'}
+            {modelId ? 'Speichern' : 'Erstellen'}
           </Button>
         </form>
     </>
   )
 }
 
-export function ModelForm({ open, onOpenChange, model }: ModelFormProps) {
+export function ModelForm({ open, onOpenChange, modelId }: ModelFormProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="overflow-y-auto sm:max-w-lg">
         {open && (
           <ModelFormInner
-            key={model?.id ?? 'new'}
+            key={modelId ?? 'new'}
             onOpenChange={onOpenChange}
-            model={model}
+            modelId={modelId}
           />
         )}
       </SheetContent>
