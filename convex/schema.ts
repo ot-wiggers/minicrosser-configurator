@@ -102,6 +102,7 @@ export default defineSchema({
       }),
     ),
     notes: v.optional(v.string()),
+    signatureStorageId: v.optional(v.id('_storage')),
     createdBy: v.optional(v.id('users')),
   })
     .index('by_documentNo', ['documentNo'])
@@ -129,6 +130,8 @@ export default defineSchema({
     phone: v.optional(v.string()),
     contactPerson: v.optional(v.string()),
     customerNumber: v.optional(v.string()),
+    marketingConsent: v.optional(v.boolean()),
+    marketingConsentDate: v.optional(v.number()),
   })
     .index('by_email', ['email'])
     .index('by_customerNumber', ['customerNumber'])

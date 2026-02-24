@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import { SignaturePad } from '@/components/configurator/signature-pad'
 import { toast } from 'sonner'
 
 interface CustomerFormDialogProps {
@@ -98,6 +99,8 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
     customerNumber: '',
   })
   const [notes, setNotes] = useState('')
+  const [marketingConsent, setMarketingConsent] = useState(false)
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [showChangeNote, setShowChangeNote] = useState(false)
@@ -191,6 +194,8 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
         phone: customer.phone?.trim() || undefined,
         contactPerson: customer.contactPerson?.trim() || undefined,
         customerNumber: customer.customerNumber?.trim() || undefined,
+        marketingConsent: marketingConsent || undefined,
+        marketingConsentDate: marketingConsent ? Date.now() : undefined,
       })
 
       const id = await createDocument({
@@ -268,6 +273,8 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
         phone: customer.phone?.trim() || undefined,
         contactPerson: customer.contactPerson?.trim() || undefined,
         customerNumber: customer.customerNumber?.trim() || undefined,
+        marketingConsent: marketingConsent || undefined,
+        marketingConsentDate: marketingConsent ? Date.now() : undefined,
       })
 
       // Update the document
@@ -462,6 +469,26 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
                 onChange={(e) => updateField('contactPerson', e.target.value)}
               />
             </div>
+
+            <div className="flex items-start gap-3 rounded-md border p-3">
+              <input
+                type="checkbox"
+                id="marketingConsent"
+                checked={marketingConsent}
+                onChange={(e) => setMarketingConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-primary"
+              />
+              <Label htmlFor="marketingConsent" className="text-sm font-normal leading-snug cursor-pointer">
+                Ich stimme dem Erhalt von Newslettern und Marketinginformationen zu
+              </Label>
+            </div>
+
+            {documentType === 'ORDER' && (
+              <div className="grid gap-2">
+                <Label>Unterschrift Kunde</Label>
+                <SignaturePad onChange={setSignatureDataUrl} />
+              </div>
+            )}
 
             <div className="grid gap-2">
               <Label htmlFor="notes">Bemerkungen</Label>

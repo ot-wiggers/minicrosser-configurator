@@ -63,6 +63,8 @@ export const create = mutation({
     phone: v.optional(v.string()),
     contactPerson: v.optional(v.string()),
     customerNumber: v.optional(v.string()),
+    marketingConsent: v.optional(v.boolean()),
+    marketingConsentDate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     let customerNumber = args.customerNumber
@@ -131,6 +133,8 @@ export const findOrCreate = mutation({
     phone: v.optional(v.string()),
     contactPerson: v.optional(v.string()),
     customerNumber: v.optional(v.string()),
+    marketingConsent: v.optional(v.boolean()),
+    marketingConsentDate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     // Try to find by email first
