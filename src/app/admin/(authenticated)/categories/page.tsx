@@ -134,6 +134,7 @@ export default function CategoriesPage() {
       )}
 
       <CategoryForm
+        key={editCategoryId ?? 'new'}
         open={formOpen}
         onOpenChange={setFormOpen}
         categoryId={editCategoryId}
