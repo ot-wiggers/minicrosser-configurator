@@ -1,5 +1,5 @@
 import { rgb } from 'pdf-lib'
-import type { DocumentRecord } from '@/modules/storage/types'
+import type { CustomerData, PricingSummary } from '@/modules/storage/types'
 import {
   createContext,
   drawText,
@@ -19,6 +19,16 @@ import {
 } from './corporate'
 import type { PDFContext } from './helpers'
 
+/** Shape of a Convex document as passed from the UI */
+interface ConvexDocument {
+  documentNo: string
+  documentType: string
+  customer: CustomerData
+  pricing: PricingSummary
+  notes?: string
+  _creationTime: number
+}
+
 const typeLabel: Record<string, string> = {
   QUOTE: 'ANGEBOT',
   ORDER: 'BESTELLUNG',
@@ -37,13 +47,13 @@ function applyPageBranding(
   drawCorporateFooter(ctx.page, { regular: ctx.font }, settings, ctx.pageWidth)
 }
 
-export async function generateDocumentPdf(doc: DocumentRecord): Promise<Uint8Array> {
+export async function generateDocumentPdf(doc: ConvexDocument): Promise<Uint8Array> {
   const ctx = await createContext()
   const settings = await loadCorporateSettings()
   const rightEdge = ctx.pageWidth - ctx.margin
 
   // Corporate header
-  const docTitle = typeLabel[doc.document_type] ?? 'DOKUMENT'
+  const docTitle = typeLabel[doc.documentType] ?? 'DOKUMENT'
   ctx.y = drawCorporateHeader(
     ctx.page,
     { regular: ctx.font, bold: ctx.fontBold },
@@ -94,10 +104,10 @@ export async function generateDocumentPdf(doc: DocumentRecord): Promise<Uint8Arr
   const infoValueX = rightEdge
 
   drawText(ctx, 'Dokumentnr.:', infoLabelX, { size: 8 })
-  drawTextRight(ctx, doc.document_no, infoValueX, { size: 8, bold: true })
+  drawTextRight(ctx, doc.documentNo ?? '\u2014', infoValueX, { size: 8, bold: true })
   moveDown(ctx, 14)
   drawText(ctx, 'Datum:', infoLabelX, { size: 8 })
-  drawTextRight(ctx, formatDatePdf(doc.created_at), infoValueX, { size: 8 })
+  drawTextRight(ctx, formatDatePdf(doc._creationTime), infoValueX, { size: 8 })
   moveDown(ctx, 14)
   if (doc.customer.customerNumber) {
     drawText(ctx, 'Kunden-Nr.:', infoLabelX, { size: 8 })
@@ -205,7 +215,7 @@ export async function generateDocumentPdf(doc: DocumentRecord): Promise<Uint8Arr
   }
 
   // ── Signature area (orders only) ──
-  if (doc.document_type === 'ORDER') {
+  if (doc.documentType === 'ORDER') {
     checkPageBreak(80)
     moveDown(ctx, 20)
 

@@ -46,7 +46,7 @@ export default function DocumentPage() {
     if (!doc) return
     try {
       const { generateDocumentPdf } = await import('@/modules/pdf')
-      const bytes = await generateDocumentPdf(doc as any)
+      const bytes = await generateDocumentPdf(doc)
       downloadPdf(bytes, `${doc.documentNo}.pdf`)
       toast.success('PDF heruntergeladen')
     } catch (err) {
