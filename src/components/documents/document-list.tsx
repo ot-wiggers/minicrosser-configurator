@@ -68,7 +68,7 @@ export function DocumentList() {
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-medium">{doc.documentNo}</span>
+                      <span className="font-mono font-medium">{doc.documentNo ?? '\u2014'}</span>
                       <Badge variant={statusVariant[doc.status]}>
                         {statusLabel[doc.status]}
                       </Badge>

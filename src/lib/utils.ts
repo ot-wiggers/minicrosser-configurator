@@ -12,7 +12,7 @@ export function formatCurrency(amount: number): string {
   }).format(amount)
 }
 
-export function formatDate(date: string | Date): string {
+export function formatDate(date: string | Date | number): string {
   return new Intl.DateTimeFormat('de-DE', {
     day: '2-digit',
     month: '2-digit',
