@@ -447,6 +447,9 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
                   id="customerNumber"
                   value={customer.customerNumber}
                   onChange={(e) => updateField('customerNumber', e.target.value)}
+                  readOnly={!customer.customerNumber}
+                  placeholder="Wird automatisch vergeben"
+                  className={!customer.customerNumber ? 'bg-muted text-muted-foreground' : ''}
                 />
               </div>
             </div>

@@ -65,7 +65,22 @@ export const create = mutation({
     customerNumber: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    return ctx.db.insert('customers', args)
+    let customerNumber = args.customerNumber
+    if (!customerNumber) {
+      // Auto-generate: K-10001, K-10002, ...
+      const seq = await ctx.db
+        .query('sequences')
+        .withIndex('by_key', (q) => q.eq('key', 'customer-seq'))
+        .first()
+      const nextVal = seq ? seq.value + 1 : 10001
+      if (seq) {
+        await ctx.db.patch(seq._id, { value: nextVal })
+      } else {
+        await ctx.db.insert('sequences', { key: 'customer-seq', value: nextVal })
+      }
+      customerNumber = `K-${nextVal}`
+    }
+    return ctx.db.insert('customers', { ...args, customerNumber })
   },
 })
 
@@ -138,7 +153,19 @@ export const findOrCreate = mutation({
       if (existing) return existing._id
     }
 
-    // Create new customer
-    return ctx.db.insert('customers', args)
+    // Auto-generate customer number for new customers
+    const seq = await ctx.db
+      .query('sequences')
+      .withIndex('by_key', (q) => q.eq('key', 'customer-seq'))
+      .first()
+    const nextVal = seq ? seq.value + 1 : 10001
+    if (seq) {
+      await ctx.db.patch(seq._id, { value: nextVal })
+    } else {
+      await ctx.db.insert('sequences', { key: 'customer-seq', value: nextVal })
+    }
+    const customerNumber = `K-${nextVal}`
+
+    return ctx.db.insert('customers', { ...args, customerNumber })
   },
 })
