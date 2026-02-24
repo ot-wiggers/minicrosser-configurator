@@ -12,6 +12,14 @@ export interface CorporateSettings {
   bankName1: string
   bankIban1: string
   bankBic1: string
+  bankName2: string
+  bankIban2: string
+  bankBic2: string
+  companyLegalName: string
+  companyRegister: string
+  companyCeo: string
+  companyTaxOffice: string
+  companyVatId: string
   pdfColorPrimary: string
   pdfColorAccent: string
   // Extended PDF settings
@@ -42,6 +50,14 @@ const DEFAULTS: CorporateSettings = {
   bankName1: 'Oldenburgische Landesbank',
   bankIban1: '',
   bankBic1: '',
+  bankName2: '',
+  bankIban2: '',
+  bankBic2: '',
+  companyLegalName: '',
+  companyRegister: '',
+  companyCeo: '',
+  companyTaxOffice: '',
+  companyVatId: '',
   pdfColorPrimary: '#1E3A5F',
   pdfColorAccent: '#D4A843',
   pdfFontSizeBody: 9,
@@ -89,6 +105,14 @@ export function buildCorporateSettings(
     bankName1: str('bankName1', DEFAULTS.bankName1),
     bankIban1: str('bankIban1', DEFAULTS.bankIban1),
     bankBic1: str('bankBic1', DEFAULTS.bankBic1),
+    bankName2: str('bankName2', DEFAULTS.bankName2),
+    bankIban2: str('bankIban2', DEFAULTS.bankIban2),
+    bankBic2: str('bankBic2', DEFAULTS.bankBic2),
+    companyLegalName: str('companyLegalName', DEFAULTS.companyLegalName),
+    companyRegister: str('companyRegister', DEFAULTS.companyRegister),
+    companyCeo: str('companyCeo', DEFAULTS.companyCeo),
+    companyTaxOffice: str('companyTaxOffice', DEFAULTS.companyTaxOffice),
+    companyVatId: str('companyVatId', DEFAULTS.companyVatId),
     pdfColorPrimary: str('pdfColorPrimary', DEFAULTS.pdfColorPrimary),
     pdfColorAccent: str('pdfColorAccent', DEFAULTS.pdfColorAccent),
     pdfFontSizeBody: num('pdfFontSizeBody', DEFAULTS.pdfFontSizeBody),
@@ -218,7 +242,8 @@ export function drawCorporateHeader(
 }
 
 /**
- * Draws the corporate footer with company + bank details.
+ * Draws the corporate footer with 3 columns:
+ * Left: company info + contact | Center: bank connections | Right: legal info
  */
 export function drawCorporateFooter(
   page: PDFPage,
@@ -226,47 +251,68 @@ export function drawCorporateFooter(
   settings: CorporateSettings,
   pageWidth: number,
 ): void {
-  const footerY = 35
+  const footerTop = 52
   const fontSize = settings.pdfFontSizeFooter
+  const lineHeight = fontSize + 2.5
   const color = rgb(0.5, 0.5, 0.5)
+  const ml = settings.pdfMarginLeft
+  const mr = settings.pdfMarginRight
+  const contentWidth = pageWidth - ml - mr
+  const col1X = ml
+  const col2X = ml + contentWidth * 0.35
+  const col3X = ml + contentWidth * 0.68
 
   // Thin line above footer
   page.drawLine({
-    start: { x: settings.pdfMarginLeft, y: footerY + 12 },
-    end: { x: pageWidth - settings.pdfMarginRight, y: footerY + 12 },
+    start: { x: ml, y: footerTop + 4 },
+    end: { x: pageWidth - mr, y: footerTop + 4 },
     thickness: 0.5,
     color: rgb(0.8, 0.8, 0.8),
   })
 
-  // Left column: company info
-  page.drawText(
-    `${settings.companyName} | ${settings.companyStreet} | ${settings.companyZip} ${settings.companyCity}`,
-    { x: settings.pdfMarginLeft, y: footerY, size: fontSize, font: fonts.regular, color },
-  )
-
-  // Middle: contact
-  const contactText = `Tel: ${settings.companyPhone} | ${settings.companyEmail}`
-  const contactWidth = fonts.regular.widthOfTextAtSize(contactText, fontSize)
-  page.drawText(contactText, {
-    x: (pageWidth - contactWidth) / 2,
-    y: footerY - 10,
-    size: fontSize,
-    font: fonts.regular,
-    color,
-  })
-
-  // Right: bank info (if available)
-  if (settings.bankName1 && settings.bankIban1) {
-    const bankText = `${settings.bankName1} | IBAN: ${settings.bankIban1}`
-    const bankWidth = fonts.regular.widthOfTextAtSize(bankText, fontSize)
-    page.drawText(bankText, {
-      x: pageWidth - bankWidth - settings.pdfMarginRight,
-      y: footerY,
-      size: fontSize,
-      font: fonts.regular,
-      color,
-    })
+  function drawCol(x: number, lines: string[]) {
+    let y = footerTop
+    for (const line of lines) {
+      if (!line) continue
+      page.drawText(line, { x, y, size: fontSize, font: fonts.regular, color })
+      y -= lineHeight
+    }
   }
+
+  // Column 1: Company info
+  drawCol(col1X, [
+    settings.companyName,
+    settings.companyStreet,
+    `${settings.companyZip} ${settings.companyCity}`,
+    `Tel: ${settings.companyPhone}`,
+    settings.companyFax ? `Fax: ${settings.companyFax}` : '',
+    settings.companyEmail,
+    settings.companyWeb,
+  ])
+
+  // Column 2: Bank connections
+  const bankLines: string[] = []
+  if (settings.bankName1) {
+    bankLines.push(settings.bankName1)
+    if (settings.bankIban1) bankLines.push(`IBAN: ${settings.bankIban1}`)
+    if (settings.bankBic1) bankLines.push(`BIC: ${settings.bankBic1}`)
+  }
+  if (settings.bankName2) {
+    bankLines.push('') // spacer
+    bankLines.push(settings.bankName2)
+    if (settings.bankIban2) bankLines.push(`IBAN: ${settings.bankIban2}`)
+    if (settings.bankBic2) bankLines.push(`BIC: ${settings.bankBic2}`)
+  }
+  drawCol(col2X, bankLines)
+
+  // Column 3: Legal info
+  drawCol(col3X, [
+    settings.companyLegalName,
+    settings.companyRegister,
+    settings.companyCeo ? `GF: ${settings.companyCeo}` : '',
+    settings.companyTaxOffice ? `FA: ${settings.companyTaxOffice}` : '',
+    settings.companyVatId ? `USt-Id: ${settings.companyVatId}` : '',
+  ])
 }
 
 /**

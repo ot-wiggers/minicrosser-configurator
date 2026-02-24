@@ -1,3 +1,4 @@
+import { rgb } from 'pdf-lib'
 import type { DocumentRecord } from '@/modules/storage/types'
 import {
   createContext,
@@ -23,7 +24,7 @@ const typeLabel: Record<string, string> = {
   ORDER: 'BESTELLUNG',
 }
 
-function formatDatePdf(date: string): string {
+function formatDatePdf(date: string | number): string {
   const d = new Date(date)
   return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
@@ -54,67 +55,124 @@ export async function generateDocumentPdf(doc: DocumentRecord): Promise<Uint8Arr
   // Page branding (accent stripe + footer)
   applyPageBranding(ctx, settings)
 
-  // Override newPage to also brand subsequent pages
-  const originalCheckPageBreak = (neededHeight: number) => {
-    if (ctx.y - neededHeight < 60) {
+  // Page-break helper that brands new pages
+  const checkPageBreak = (neededHeight: number) => {
+    if (ctx.y - neededHeight < 70) {
       newPage(ctx)
       applyPageBranding(ctx, settings)
     }
   }
 
-  // Document number and date
-  drawText(ctx, `Nr. ${doc.document_no}`, ctx.margin, { size: 10 })
-  drawTextRight(ctx, `Datum: ${formatDatePdf(doc.created_at)}`, rightEdge, { size: 10 })
-  moveDown(ctx, 24)
+  // ── Sender line (small, gray) ──
+  drawText(ctx, `${settings.companyName} \u2013 ${settings.companyStreet} \u2013 ${settings.companyZip} ${settings.companyCity}`, ctx.margin, {
+    size: 6.5,
+    color: { r: 0.5, g: 0.5, b: 0.5 },
+  })
+  moveDown(ctx, 18)
 
-  // Customer block
-  drawHeading(ctx, 'Kundendaten')
+  // ── Address block (left) + Document info (right) ──
+  const savedY = ctx.y
+
+  // Customer address (left side)
   drawText(ctx, doc.customer.company, ctx.margin, { bold: true })
   moveDown(ctx)
-  drawText(ctx, `${doc.customer.firstName} ${doc.customer.lastName}`, ctx.margin)
-  moveDown(ctx)
+  if (doc.customer.contactPerson) {
+    drawText(ctx, doc.customer.contactPerson, ctx.margin)
+    moveDown(ctx)
+  } else {
+    drawText(ctx, `${doc.customer.firstName} ${doc.customer.lastName}`, ctx.margin)
+    moveDown(ctx)
+  }
   drawText(ctx, doc.customer.street, ctx.margin)
   moveDown(ctx)
   drawText(ctx, `${doc.customer.zip} ${doc.customer.city}`, ctx.margin)
-  moveDown(ctx)
-  drawText(ctx, `E-Mail: ${doc.customer.email}`, ctx.margin)
-  if (doc.customer.phone) {
-    moveDown(ctx)
-    drawText(ctx, `Telefon: ${doc.customer.phone}`, ctx.margin)
-  }
-  moveDown(ctx, 24)
+  const addressEndY = ctx.y
 
-  // Line items table
+  // Document info (right side)
+  ctx.y = savedY
+  const infoLabelX = rightEdge - 160
+  const infoValueX = rightEdge
+
+  drawText(ctx, 'Dokumentnr.:', infoLabelX, { size: 8 })
+  drawTextRight(ctx, doc.document_no, infoValueX, { size: 8, bold: true })
+  moveDown(ctx, 14)
+  drawText(ctx, 'Datum:', infoLabelX, { size: 8 })
+  drawTextRight(ctx, formatDatePdf(doc.created_at), infoValueX, { size: 8 })
+  moveDown(ctx, 14)
+  if (doc.customer.customerNumber) {
+    drawText(ctx, 'Kunden-Nr.:', infoLabelX, { size: 8 })
+    drawTextRight(ctx, doc.customer.customerNumber, infoValueX, { size: 8 })
+    moveDown(ctx, 14)
+  }
+  drawText(ctx, 'E-Mail:', infoLabelX, { size: 8 })
+  drawTextRight(ctx, doc.customer.email, infoValueX, { size: 8 })
+  if (doc.customer.phone) {
+    moveDown(ctx, 14)
+    drawText(ctx, 'Telefon:', infoLabelX, { size: 8 })
+    drawTextRight(ctx, doc.customer.phone, infoValueX, { size: 8 })
+  }
+
+  // Resume below whichever column is lower
+  ctx.y = Math.min(addressEndY, ctx.y) - 24
+
+  // ── Line items table ──
   drawHeading(ctx, 'Positionen')
 
-  const col1 = ctx.margin
-  const col2 = ctx.margin + 80
-  const col3 = rightEdge - 200
-  const col4 = rightEdge - 110
-  const col5 = rightEdge
+  const colPos = ctx.margin
+  const colArt = ctx.margin + 30
+  const colName = ctx.margin + 100
+  const colQty = rightEdge - 200
+  const colUnit = rightEdge - 110
+  const colTotal = rightEdge
 
-  drawText(ctx, 'Art.-Nr.', col1, { size: 8, bold: true })
-  drawText(ctx, 'Bezeichnung', col2, { size: 8, bold: true })
-  drawTextRight(ctx, 'Menge', col3, { size: 8, bold: true })
-  drawTextRight(ctx, 'Einzelpr. netto', col4, { size: 8, bold: true })
-  drawTextRight(ctx, 'Gesamt netto', col5, { size: 8, bold: true })
+  // Table header
+  drawText(ctx, 'Pos.', colPos, { size: 8, bold: true })
+  drawText(ctx, 'Art.-Nr.', colArt, { size: 8, bold: true })
+  drawText(ctx, 'Bezeichnung', colName, { size: 8, bold: true })
+  drawTextRight(ctx, 'Menge', colQty, { size: 8, bold: true })
+  drawTextRight(ctx, 'Einzelpr. netto', colUnit, { size: 8, bold: true })
+  drawTextRight(ctx, 'Gesamt netto', colTotal, { size: 8, bold: true })
   moveDown(ctx, 6)
   drawLine(ctx, ctx.margin, rightEdge)
 
+  let posNr = 1
   for (const item of doc.pricing.lineItems) {
-    originalCheckPageBreak(20)
-    drawText(ctx, item.articleNo, col1, { size: 9 })
-    drawText(ctx, item.name, col2, { size: 9 })
-    drawTextRight(ctx, String(item.quantity), col3, { size: 9 })
-    drawTextRight(ctx, formatCurrencyPdf(item.unitPriceNet), col4, { size: 9 })
-    drawTextRight(ctx, formatCurrencyPdf(item.totalNet), col5, { size: 9 })
+    checkPageBreak(20)
+
+    // Alternating row background
+    if (posNr % 2 === 0) {
+      ctx.page.drawRectangle({
+        x: ctx.margin,
+        y: ctx.y - 4,
+        width: rightEdge - ctx.margin,
+        height: 16,
+        color: rgb(0.96, 0.96, 0.96),
+      })
+    }
+
+    drawText(ctx, String(posNr), colPos, { size: 9 })
+    drawText(ctx, item.articleNo, colArt, { size: 9 })
+    drawText(ctx, item.name, colName, { size: 9 })
+    drawTextRight(ctx, String(item.quantity), colQty, { size: 9 })
+    drawTextRight(ctx, formatCurrencyPdf(item.unitPriceNet), colUnit, { size: 9 })
+    drawTextRight(ctx, formatCurrencyPdf(item.totalNet), colTotal, { size: 9 })
     moveDown(ctx)
+
+    // Row separator line
+    ctx.page.drawLine({
+      start: { x: ctx.margin, y: ctx.y + 2 },
+      end: { x: rightEdge, y: ctx.y + 2 },
+      thickness: 0.25,
+      color: rgb(0.85, 0.85, 0.85),
+    })
+
+    posNr++
   }
 
   moveDown(ctx, 8)
   drawLine(ctx, ctx.margin, rightEdge)
 
-  // Summary
+  // ── Summary ──
   const summaryX = rightEdge - 180
 
   drawText(ctx, 'Netto', summaryX, { size: 10 })
@@ -133,16 +191,45 @@ export async function generateDocumentPdf(doc: DocumentRecord): Promise<Uint8Arr
   })
   moveDown(ctx, 30)
 
-  // Notes
+  // ── Notes ──
   if (doc.notes) {
-    originalCheckPageBreak(40)
+    checkPageBreak(40)
     drawHeading(ctx, 'Bemerkungen')
     const lines = doc.notes.split('\n')
     for (const line of lines) {
-      originalCheckPageBreak(16)
+      checkPageBreak(16)
       drawText(ctx, line, ctx.margin, { size: 9 })
       moveDown(ctx)
     }
+    moveDown(ctx, 16)
+  }
+
+  // ── Signature area (orders only) ──
+  if (doc.document_type === 'ORDER') {
+    checkPageBreak(80)
+    moveDown(ctx, 20)
+
+    const lineWidth = 180
+    const leftLineX = ctx.margin
+    const rightLineX = rightEdge - lineWidth
+
+    // Signature lines
+    ctx.page.drawLine({
+      start: { x: leftLineX, y: ctx.y },
+      end: { x: leftLineX + lineWidth, y: ctx.y },
+      thickness: 0.5,
+      color: rgb(0.4, 0.4, 0.4),
+    })
+    ctx.page.drawLine({
+      start: { x: rightLineX, y: ctx.y },
+      end: { x: rightLineX + lineWidth, y: ctx.y },
+      thickness: 0.5,
+      color: rgb(0.4, 0.4, 0.4),
+    })
+
+    moveDown(ctx, 12)
+    drawText(ctx, 'Datum, Ort', leftLineX, { size: 7, color: { r: 0.5, g: 0.5, b: 0.5 } })
+    drawText(ctx, 'Unterschrift Kunde', rightLineX, { size: 7, color: { r: 0.5, g: 0.5, b: 0.5 } })
   }
 
   return ctx.doc.save()
