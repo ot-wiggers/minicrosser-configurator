@@ -28,17 +28,44 @@ function isColorGroup(groupName: string): boolean {
 }
 
 // ── Product Image Panel (left) ─────────────────────────────
-function ProductImagePanel({ baseModel }: { baseModel: any }) {
-  if (!baseModel) return null
+function ProductImagePanel({
+  baseModel,
+  colorImages,
+}: {
+  baseModel: any
+  colorImages?: { _id: string; imageUrl: string | null }[]
+}) {
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  // Build image list: color variants first, then base model image as fallback
+  const allImages = useMemo(() => {
+    const imgs: { id: string; url: string }[] = []
+    if (colorImages) {
+      for (const ci of colorImages) {
+        if (ci.imageUrl) imgs.push({ id: ci._id, url: ci.imageUrl })
+      }
+    }
+    if (imgs.length === 0 && baseModel?.imageUrl) {
+      imgs.push({ id: 'base', url: baseModel.imageUrl })
+    }
+    return imgs
+  }, [colorImages, baseModel])
+
+  // Reset active index when images change
+  const imageKey = allImages.map((i) => i.id).join(',')
+  useMemo(() => setActiveIndex(0), [imageKey])
+
+  const mainImage = allImages[activeIndex] ?? allImages[0]
 
   return (
     <div className="flex flex-col gap-3">
       <div className="aspect-[4/3] overflow-hidden rounded-xl bg-muted">
-        {baseModel.imageUrl ? (
+        {mainImage ? (
           <img
-            src={baseModel.imageUrl}
+            key={mainImage.id}
+            src={mainImage.url}
             alt={baseModel.name}
-            className="h-full w-full object-cover transition-opacity duration-300"
+            className="h-full w-full object-cover animate-in fade-in duration-300"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
@@ -46,6 +73,24 @@ function ProductImagePanel({ baseModel }: { baseModel: any }) {
           </div>
         )}
       </div>
+
+      {/* Thumbnail strip */}
+      {allImages.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {allImages.map((img, idx) => (
+            <button
+              key={img.id}
+              className={cn(
+                'h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-all',
+                idx === activeIndex ? 'border-[#ffcf00] ring-1 ring-[#ffcf00]' : 'border-border hover:border-border/80',
+              )}
+              onClick={() => setActiveIndex(idx)}
+            >
+              <img src={img.url} alt="" className="h-full w-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -296,6 +341,29 @@ export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutPro
     selectedCategory ? { categoryId: selectedCategory } : 'skip',
   )
 
+  // Find selected color option for image variant lookup
+  const selectedColorOptionId = useMemo(() => {
+    if (!groupsWithOptions) return null
+    for (const { group, items } of groupsWithOptions) {
+      if (isColorGroup(group.name) && group.selectionType === 'SINGLE') {
+        const selected = items.find((item: any) => selectedOptions[item._id])
+        if (selected) return selected._id as Id<'options'>
+      }
+    }
+    return null
+  }, [groupsWithOptions, selectedOptions])
+
+  // Query color variant images for current model + selected color
+  const colorImages = useQuery(
+    api.colorVariantImages.listByModelAndOption,
+    selectedBaseModelId && selectedColorOptionId
+      ? {
+          baseModelId: selectedBaseModelId as Id<'baseModels'>,
+          optionId: selectedColorOptionId,
+        }
+      : 'skip',
+  )
+
   const pricing = useMemo(() => {
     if (!baseModel) return null
     const optionItems = Object.values(selectedOptions).map((opt) => ({
@@ -326,7 +394,7 @@ export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutPro
         {/* Left: Product image */}
         <div className="w-full lg:w-[58%]">
           <div className="sticky top-20">
-            <ProductImagePanel baseModel={baseModel} />
+            <ProductImagePanel baseModel={baseModel} colorImages={colorImages ?? undefined} />
           </div>
         </div>
 
