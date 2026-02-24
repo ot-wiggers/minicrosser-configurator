@@ -55,6 +55,16 @@ export default defineSchema({
     .index('by_skuCode', ['skuCode'])
     .index('by_sortOrder', ['sortOrder']),
 
+  // ── Color Variant Images ────────────────────────────────
+  colorVariantImages: defineTable({
+    baseModelId: v.id('baseModels'),
+    optionId: v.id('options'),
+    imageStorageId: v.id('_storage'),
+    sortOrder: v.number(),
+  })
+    .index('by_model_option', ['baseModelId', 'optionId', 'sortOrder'])
+    .index('by_model', ['baseModelId', 'sortOrder']),
+
   // ── Documents ────────────────────────────────────────────
   documents: defineTable({
     documentNo: v.string(),
