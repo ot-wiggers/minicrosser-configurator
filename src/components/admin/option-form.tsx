@@ -12,12 +12,134 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
+import { Trash2 } from 'lucide-react'
 
 interface OptionFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   optionId?: string
+}
+
+/** Section for managing per-model color variant images (only for color options). */
+function ColorVariantSection({ optionId }: { optionId: string }) {
+  const baseModels = useQuery(api.baseModels.list)
+  const variantImages = useQuery(api.colorVariantImages.listByModel, baseModels?.[0]
+    ? { baseModelId: baseModels[0]._id }
+    : 'skip',
+  )
+  // Query all variant images for this option across all models
+  // We query per-model inside the sub-component instead.
+
+  if (!baseModels) return null
+
+  return (
+    <div className="space-y-3">
+      <Separator />
+      <Label className="text-base font-semibold">Modell-Bilder (Farbvariante)</Label>
+      <p className="text-sm text-muted-foreground">
+        Laden Sie pro Basismodell ein Bild in dieser Farbe hoch.
+      </p>
+      {baseModels.map((model) => (
+        <ColorVariantModelRow
+          key={model._id}
+          modelId={model._id}
+          modelName={model.name}
+          optionId={optionId as Id<'options'>}
+        />
+      ))}
+    </div>
+  )
+}
+
+function ColorVariantModelRow({
+  modelId,
+  modelName,
+  optionId,
+}: {
+  modelId: Id<'baseModels'>
+  modelName: string
+  optionId: Id<'options'>
+}) {
+  const images = useQuery(api.colorVariantImages.listByModelAndOption, {
+    baseModelId: modelId,
+    optionId,
+  })
+  const createVariant = useMutation(api.colorVariantImages.create)
+  const removeVariant = useMutation(api.colorVariantImages.remove)
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl)
+  const [uploading, setUploading] = useState(false)
+
+  async function handleUpload(file: File) {
+    if (!file.type.startsWith('image/')) return
+    setUploading(true)
+    try {
+      const uploadUrl = await generateUploadUrl()
+      const result = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+      const { storageId } = await result.json()
+      await createVariant({
+        baseModelId: modelId,
+        optionId,
+        imageStorageId: storageId,
+        sortOrder: (images?.length ?? 0) + 1,
+      })
+      toast.success(`Bild fur ${modelName} hochgeladen`)
+    } catch {
+      toast.error('Upload fehlgeschlagen')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="rounded-lg border p-3">
+      <p className="mb-2 text-sm font-medium">{modelName}</p>
+      <div className="flex flex-wrap gap-2">
+        {images?.map((img) => (
+          <div key={img._id} className="relative">
+            <img
+              src={img.imageUrl ?? ''}
+              alt={modelName}
+              className="h-16 w-16 rounded-md border object-cover"
+            />
+            <button
+              type="button"
+              onClick={async () => {
+                await removeVariant({ id: img._id })
+                toast.success('Bild entfernt')
+              }}
+              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+        {/* Upload button */}
+        <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-md border-2 border-dashed border-muted-foreground/25 text-muted-foreground transition-colors hover:border-muted-foreground/50">
+          {uploading ? (
+            <span className="text-xs">...</span>
+          ) : (
+            <span className="text-xl">+</span>
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) handleUpload(file)
+              e.target.value = ''
+            }}
+          />
+        </label>
+      </div>
+    </div>
+  )
 }
 
 const VAT_RATE = 1.19
@@ -272,6 +394,15 @@ function OptionFormInner({
           <Label>Bild (optional)</Label>
           <ImageUpload storageId={imageStorageId} onChange={setImageStorageId} />
         </div>
+
+        {/* Color variant images (only for color options being edited) */}
+        {optionId && optionGroupId && optionGroups && (() => {
+          const group = optionGroups.find((g) => g._id === optionGroupId)
+          if (group && /farbe|color/i.test(group.name)) {
+            return <ColorVariantSection optionId={optionId} />
+          }
+          return null
+        })()}
 
         {/* Submit */}
         <Button type="submit" className="mt-2 w-full">
