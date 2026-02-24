@@ -51,3 +51,6 @@ public/swe-worker-*.js
 
 # worktrees
 .worktrees/
+
+# playwright mcp
+.playwright-mcp/
