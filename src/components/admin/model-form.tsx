@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -73,6 +73,26 @@ function ModelFormInner({
     const calculated = Math.round(model.priceNet * VAT_RATE * 100) / 100
     return Math.abs(model.priceGross - calculated) > 0.01
   })
+
+  // Populate form when model data loads (query is async)
+  useEffect(() => {
+    if (model) {
+      setForm({
+        categoryId: model.categoryId,
+        skuCode: model.skuCode,
+        articleNo: model.articleNo,
+        name: model.name,
+        description: model.description ?? '',
+        priceNet: model.priceNet,
+        priceGross: model.priceGross,
+        sortOrder: model.sortOrder,
+        isActive: model.isActive,
+        imageStorageId: model.imageStorageId as string | undefined,
+      })
+      const calculated = Math.round(model.priceNet * VAT_RATE * 100) / 100
+      setGrossOverridden(Math.abs(model.priceGross - calculated) > 0.01)
+    }
+  }, [model])
 
   function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => {
