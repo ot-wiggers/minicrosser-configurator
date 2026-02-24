@@ -57,6 +57,7 @@ const SETTING_KEYS = [
   'pdfHeaderLine2',
   'pdfHeaderLine3',
   'pdfSlogan',
+  'pdfLogoMaxHeight',
 ] as const
 
 type SettingKey = (typeof SETTING_KEYS)[number]
@@ -111,7 +112,8 @@ export function SettingsForm() {
           key.startsWith('pdfFontSize') ||
           key.startsWith('pdfHeader') && key === 'pdfHeaderHeight' ||
           key === 'pdfAccentStripeWidth' ||
-          key.startsWith('pdfMargin')
+          key.startsWith('pdfMargin') ||
+          key === 'pdfLogoMaxHeight'
         ) {
           // Store numeric PDF settings as numbers
           const n = parseFloat(raw)
@@ -554,8 +556,8 @@ export function SettingsForm() {
         <CardHeader>
           <CardTitle>Firmenlogo</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="mb-3 text-sm text-muted-foreground">
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
             Das Logo wird im PDF-Header anstelle des Firmennamens angezeigt.
           </p>
           <ImageUpload
@@ -563,6 +565,21 @@ export function SettingsForm() {
             onChange={(id) => update('logoStorageId', id ?? '')}
             label="Logo hochladen (PNG/JPG)"
           />
+          <div className="max-w-xs">
+            <Label htmlFor="pdfLogoMaxHeight">Maximale Logo-Hoehe (pt)</Label>
+            <Input
+              id="pdfLogoMaxHeight"
+              type="number"
+              min={16}
+              max={80}
+              step={2}
+              value={values.pdfLogoMaxHeight ?? '40'}
+              onChange={(e) => update('pdfLogoMaxHeight', e.target.value)}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Standard: 40pt. Kleinere Werte fuer schmaelere Logos.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

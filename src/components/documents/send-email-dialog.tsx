@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { generateDocumentPdf } from '@/modules/pdf'
 import {
   Dialog,
@@ -61,6 +62,16 @@ function arrayBufferToBase64(bytes: Uint8Array): string {
 
 export function SendEmailDialog({ open, onOpenChange, document: doc }: SendEmailDialogProps) {
   const createOutboxEntry = useMutation(api.outbox.create)
+  const allSettings = useQuery(api.settings.list)
+  const logoStorageId = allSettings?.find((s) => s.key === 'logoStorageId')?.value as string | undefined
+  const logoUrl = useQuery(
+    api.files.getUrl,
+    logoStorageId ? { storageId: logoStorageId as Id<'_storage'> } : 'skip',
+  )
+  const signatureUrl = useQuery(
+    api.files.getUrl,
+    (doc as any).signatureStorageId ? { storageId: (doc as any).signatureStorageId } : 'skip',
+  )
 
   const [toEmail, setToEmail] = useState(doc.customer.email)
   const [subject, setSubject] = useState(
@@ -76,8 +87,22 @@ export function SendEmailDialog({ open, onOpenChange, document: doc }: SendEmail
 
     setSending(true)
     try {
+      // Build images and settings for PDF
+      const images: { logoBytes?: Uint8Array; signatureBytes?: Uint8Array } = {}
+      if (logoUrl) {
+        const res = await fetch(logoUrl)
+        images.logoBytes = new Uint8Array(await res.arrayBuffer())
+      }
+      if (signatureUrl) {
+        const res = await fetch(signatureUrl)
+        images.signatureBytes = new Uint8Array(await res.arrayBuffer())
+      }
+      const settingsMap = allSettings
+        ? Object.fromEntries(allSettings.map((s) => [s.key, s.value]))
+        : undefined
+
       // Generate PDF and convert to base64
-      const pdfBytes = await generateDocumentPdf(doc as any)
+      const pdfBytes = await generateDocumentPdf(doc as any, images, settingsMap)
       const pdfBase64 = arrayBufferToBase64(pdfBytes)
 
       // Queue email in Convex outbox

@@ -59,9 +59,10 @@ function applyPageBranding(
 export async function generateDocumentPdf(
   doc: ConvexDocument,
   images?: PdfImages,
+  settingsMap?: Record<string, string | number | boolean>,
 ): Promise<Uint8Array> {
   const ctx = await createContext()
-  const settings = await loadCorporateSettings()
+  const settings = await loadCorporateSettings(settingsMap)
   const rightEdge = ctx.pageWidth - ctx.margin
 
   // Embed logo if provided
@@ -187,10 +188,10 @@ export async function generateDocumentPdf(
     drawTextRight(ctx, formatCurrencyPdf(item.totalNet), colTotal, { size: 9 })
     moveDown(ctx)
 
-    // Row separator line
+    // Row separator line (between rows, at top edge of next row area)
     ctx.page.drawLine({
-      start: { x: ctx.margin, y: ctx.y + 2 },
-      end: { x: rightEdge, y: ctx.y + 2 },
+      start: { x: ctx.margin, y: ctx.y + 12 },
+      end: { x: rightEdge, y: ctx.y + 12 },
       thickness: 0.25,
       color: rgb(0.85, 0.85, 0.85),
     })
@@ -200,6 +201,7 @@ export async function generateDocumentPdf(
 
   moveDown(ctx, 8)
   drawLine(ctx, ctx.margin, rightEdge)
+  moveDown(ctx, 6)
 
   // ── Summary ──
   const summaryX = rightEdge - 180
@@ -213,12 +215,12 @@ export async function generateDocumentPdf(
   moveDown(ctx, 8)
   drawLine(ctx, summaryX, rightEdge)
 
-  drawText(ctx, 'Brutto', summaryX, { size: 12, bold: true })
+  drawText(ctx, 'Brutto', summaryX, { size: 10, bold: true })
   drawTextRight(ctx, formatCurrencyPdf(doc.pricing.totalGross), rightEdge, {
-    size: 12,
+    size: 10,
     bold: true,
   })
-  moveDown(ctx, 30)
+  moveDown(ctx, 120)
 
   // ── Notes ──
   if (doc.notes) {
@@ -236,13 +238,22 @@ export async function generateDocumentPdf(
   // ── Signature area (orders only) ──
   if (doc.documentType === 'ORDER') {
     checkPageBreak(80)
-    moveDown(ctx, 20)
 
     const lineWidth = 180
     const leftLineX = ctx.margin
     const rightLineX = rightEdge - lineWidth
+    const signatureLineY = ctx.y
 
-    // Embed signature image if provided
+    // Date text ABOVE the left line
+    ctx.page.drawText(formatDatePdf(Date.now()), {
+      x: leftLineX,
+      y: signatureLineY + 8,
+      size: 9,
+      font: ctx.font,
+      color: rgb(0.18, 0.22, 0.28),
+    })
+
+    // Embed signature image directly above the right signature line
     if (images?.signatureBytes) {
       try {
         let sigImage
@@ -262,11 +273,10 @@ export async function generateDocumentPdf(
         }
         ctx.page.drawImage(sigImage, {
           x: rightLineX + (lineWidth - sigW) / 2,
-          y: ctx.y,
+          y: signatureLineY,
           width: sigW,
           height: sigH,
         })
-        moveDown(ctx, sigH + 4)
       } catch {
         // Signature image could not be embedded — skip
       }
@@ -274,20 +284,21 @@ export async function generateDocumentPdf(
 
     // Signature lines
     ctx.page.drawLine({
-      start: { x: leftLineX, y: ctx.y },
-      end: { x: leftLineX + lineWidth, y: ctx.y },
+      start: { x: leftLineX, y: signatureLineY },
+      end: { x: leftLineX + lineWidth, y: signatureLineY },
       thickness: 0.5,
       color: rgb(0.4, 0.4, 0.4),
     })
     ctx.page.drawLine({
-      start: { x: rightLineX, y: ctx.y },
-      end: { x: rightLineX + lineWidth, y: ctx.y },
+      start: { x: rightLineX, y: signatureLineY },
+      end: { x: rightLineX + lineWidth, y: signatureLineY },
       thickness: 0.5,
       color: rgb(0.4, 0.4, 0.4),
     })
 
-    moveDown(ctx, 12)
-    drawText(ctx, 'Datum, Ort', leftLineX, { size: 7, color: { r: 0.5, g: 0.5, b: 0.5 } })
+    // Labels below the lines
+    ctx.y = signatureLineY - 12
+    drawText(ctx, 'Datum', leftLineX, { size: 7, color: { r: 0.5, g: 0.5, b: 0.5 } })
     drawText(ctx, 'Unterschrift Kunde', rightLineX, { size: 7, color: { r: 0.5, g: 0.5, b: 0.5 } })
   }
 

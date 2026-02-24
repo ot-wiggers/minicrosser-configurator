@@ -43,6 +43,12 @@ export default function DocumentPage() {
   const allOptions = useQuery(api.options.list)
   const allSettings = useQuery(api.settings.list)
 
+  // Category image for blank PDF
+  const category = useQuery(
+    api.categories.getById,
+    doc?.selectedCategory ? { id: doc.selectedCategory as Id<"categories"> } : 'skip',
+  )
+
   // Resolve storage URLs for signature and logo
   const signatureUrl = useQuery(
     api.files.getUrl,
@@ -53,6 +59,16 @@ export default function DocumentPage() {
     api.files.getUrl,
     logoStorageId ? { storageId: logoStorageId as Id<"_storage"> } : 'skip',
   )
+
+  // Build settings map for PDF generators (so they use Convex settings, not defaults)
+  function buildSettingsMap(): Record<string, string | number | boolean> | undefined {
+    if (!allSettings) return undefined
+    const map: Record<string, string | number | boolean> = {}
+    for (const rec of allSettings) {
+      map[rec.key] = rec.value
+    }
+    return map
+  }
 
   /** Fetch image bytes from a URL */
   async function fetchImageBytes(url: string): Promise<Uint8Array> {
@@ -68,7 +84,7 @@ export default function DocumentPage() {
       const images: { logoBytes?: Uint8Array; signatureBytes?: Uint8Array } = {}
       if (logoUrl) images.logoBytes = await fetchImageBytes(logoUrl)
       if (signatureUrl) images.signatureBytes = await fetchImageBytes(signatureUrl)
-      const bytes = await generateDocumentPdf(doc, images)
+      const bytes = await generateDocumentPdf(doc, images, buildSettingsMap())
       downloadPdf(bytes, `${doc.documentNo}.pdf`)
       toast.success('PDF heruntergeladen')
     } catch (err) {
@@ -115,7 +131,9 @@ export default function DocumentPage() {
 
       let logoBytesForBlank: Uint8Array | undefined
       if (logoUrl) logoBytesForBlank = await fetchImageBytes(logoUrl)
-      const bytes = await generateBlankFormPdf(doc.selectedCategory, catalogData, logoBytesForBlank)
+      let categoryImageBytes: Uint8Array | undefined
+      if (category?.imageUrl) categoryImageBytes = await fetchImageBytes(category.imageUrl)
+      const bytes = await generateBlankFormPdf(doc.selectedCategory, catalogData, logoBytesForBlank, buildSettingsMap(), categoryImageBytes)
       downloadPdf(bytes, `Blanko-${doc.documentNo}.pdf`)
       toast.success('Blanko-PDF heruntergeladen')
     } catch (err) {

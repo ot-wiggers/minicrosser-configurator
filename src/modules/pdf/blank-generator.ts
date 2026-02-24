@@ -101,24 +101,24 @@ function drawSectionHeader(
   ensureSpace(ctx, settings, 30)
   const primary = hexToRgb(settings.pdfColorPrimary)
 
-  // Section header bar
+  // Section header bar (draws downward from ctx.y, not upward)
   ctx.page.drawRectangle({
     x: ctx.margin,
-    y: ctx.y - 4,
+    y: ctx.y - 14,
     width: rightEdge - ctx.margin,
-    height: 18,
+    height: 16,
     color: rgb(primary.r, primary.g, primary.b),
   })
 
   ctx.page.drawText(text, {
     x: ctx.margin + 6,
-    y: ctx.y,
+    y: ctx.y - 10,
     size: 9,
     font: ctx.fontBold,
     color: rgb(1, 1, 1),
   })
 
-  moveDown(ctx, 24)
+  moveDown(ctx, 22)
 }
 
 /**
@@ -130,15 +130,23 @@ export async function generateBlankFormPdf(
   categoryId: string,
   catalogData: BlankPdfCatalogData,
   logoBytes?: Uint8Array,
+  settingsMap?: Record<string, string | number | boolean>,
+  categoryImageBytes?: Uint8Array,
 ): Promise<Uint8Array> {
   const ctx = await createContext()
-  const settings = await loadCorporateSettings()
+  const settings = await loadCorporateSettings(settingsMap)
   const rightEdge = ctx.pageWidth - ctx.margin
 
   // Embed logo if provided
   let logoImage: PDFImage | undefined
   if (logoBytes) {
     logoImage = await embedLogoImage(ctx.doc, logoBytes)
+  }
+
+  // Embed category image if provided
+  let categoryImage: PDFImage | undefined
+  if (categoryImageBytes) {
+    categoryImage = await embedLogoImage(ctx.doc, categoryImageBytes)
   }
 
   // Corporate header
@@ -152,8 +160,13 @@ export async function generateBlankFormPdf(
   )
   applyPageBranding(ctx, settings)
 
-  // Customer fields
+  // Customer fields (left half) + Category image (right half)
   moveDown(ctx, 4)
+  const midX = ctx.margin + (rightEdge - ctx.margin) * 0.5
+  const fieldLabelW = 70
+  const fieldLineEnd = midX - 10
+  const savedCustomerY = ctx.y
+
   const customerFields = [
     'Kunden-Nr.',
     'Ansprechpartner',
@@ -165,9 +178,34 @@ export async function generateBlankFormPdf(
   ]
   for (const field of customerFields) {
     drawText(ctx, `${field}:`, ctx.margin, { size: 8 })
-    drawBlankLine(ctx, ctx.margin + 80, rightEdge - ctx.margin - 80)
+    drawBlankLine(ctx, ctx.margin + fieldLabelW, fieldLineEnd - ctx.margin - fieldLabelW)
     moveDown(ctx, 14)
   }
+  const customerEndY = ctx.y
+
+  // Draw category image on the right side
+  if (categoryImage) {
+    const imgAreaX = midX + 10
+    const imgAreaW = rightEdge - imgAreaX
+    const imgAreaH = savedCustomerY - customerEndY - 8
+    const aspect = categoryImage.width / categoryImage.height
+    let imgW = imgAreaW
+    let imgH = imgW / aspect
+    if (imgH > imgAreaH) {
+      imgH = imgAreaH
+      imgW = imgH * aspect
+    }
+    const imgX = imgAreaX + (imgAreaW - imgW) / 2
+    const imgY = customerEndY + (savedCustomerY - customerEndY - imgH) / 2
+    ctx.page.drawImage(categoryImage, {
+      x: imgX,
+      y: imgY,
+      width: imgW,
+      height: imgH,
+    })
+  }
+
+  ctx.y = customerEndY
   moveDown(ctx, 8)
 
   // Table header
@@ -184,6 +222,7 @@ export async function generateBlankFormPdf(
   drawTextRight(ctx, 'Brutto', colGross, { size: 7, bold: true })
   moveDown(ctx, 4)
   drawLine(ctx, ctx.margin, rightEdge)
+  moveDown(ctx, 4)
 
   // Filter base models for this category
   const activeModels = catalogData.baseModels
@@ -273,20 +312,20 @@ export async function generateBlankFormPdf(
 
   // Summary section
   ensureSpace(ctx, settings, 100)
-  moveDown(ctx, 8)
-  drawLine(ctx, ctx.margin, rightEdge)
-  moveDown(ctx, 4)
+  moveDown(ctx, 16)
 
   const summaryX = rightEdge - 200
-  drawText(ctx, 'Netto:', summaryX, { size: 10 })
-  drawBlankLine(ctx, summaryX + 80, 120)
+  const blankLineX = summaryX + 80
+  const blankLineW = rightEdge - blankLineX
+
+  drawText(ctx, 'Netto:', summaryX, { size: 9 })
+  drawBlankLine(ctx, blankLineX, blankLineW)
   moveDown(ctx, 18)
-  drawText(ctx, 'MwSt. 19%:', summaryX, { size: 10 })
-  drawBlankLine(ctx, summaryX + 80, 120)
-  moveDown(ctx, 8)
-  drawLine(ctx, summaryX, rightEdge)
-  drawText(ctx, 'Brutto:', summaryX, { size: 12, bold: true })
-  drawBlankLine(ctx, summaryX + 80, 120)
+  drawText(ctx, 'MwSt. 19%:', summaryX, { size: 9 })
+  drawBlankLine(ctx, blankLineX, blankLineW)
+  moveDown(ctx, 18)
+  drawText(ctx, 'Brutto:', summaryX, { size: 10, bold: true })
+  drawBlankLine(ctx, blankLineX, blankLineW)
   moveDown(ctx, 30)
 
   // Notes section

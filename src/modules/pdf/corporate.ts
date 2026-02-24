@@ -37,6 +37,7 @@ export interface CorporateSettings {
   pdfHeaderLine2: string
   pdfHeaderLine3: string
   pdfSlogan: string
+  pdfLogoMaxHeight: number
 }
 
 const DEFAULTS: CorporateSettings = {
@@ -75,6 +76,7 @@ const DEFAULTS: CorporateSettings = {
   pdfHeaderLine2: '',
   pdfHeaderLine3: '',
   pdfSlogan: '',
+  pdfLogoMaxHeight: 40,
 }
 
 /**
@@ -131,6 +133,7 @@ export function buildCorporateSettings(
     pdfHeaderLine2: str('pdfHeaderLine2', DEFAULTS.pdfHeaderLine2),
     pdfHeaderLine3: str('pdfHeaderLine3', DEFAULTS.pdfHeaderLine3),
     pdfSlogan: str('pdfSlogan', DEFAULTS.pdfSlogan),
+    pdfLogoMaxHeight: num('pdfLogoMaxHeight', DEFAULTS.pdfLogoMaxHeight),
   }
 }
 
@@ -204,7 +207,7 @@ export function drawCorporateHeader(
   // Logo or company name on the left
   const textStartX = stripeWidth + 12
   if (logoImage) {
-    const maxLogoH = headerHeight - 16
+    const maxLogoH = settings.pdfLogoMaxHeight
     const maxLogoW = 180
     const aspect = logoImage.width / logoImage.height
     let logoH = maxLogoH

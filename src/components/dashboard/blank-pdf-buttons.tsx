@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { Button } from '@/components/ui/button'
 import { FileText, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -14,8 +15,15 @@ export function BlankPdfButtons() {
   const allBaseModels = useQuery(api.baseModels.list)
   const allOptionGroups = useQuery(api.optionGroups.list)
   const allOptions = useQuery(api.options.list)
+  const allSettings = useQuery(api.settings.list)
 
-  const handleDownload = async (categoryId: string, categoryName: string) => {
+  const logoStorageId = allSettings?.find((s) => s.key === 'logoStorageId')?.value as string | undefined
+  const logoUrl = useQuery(
+    api.files.getUrl,
+    logoStorageId ? { storageId: logoStorageId as Id<'_storage'> } : 'skip',
+  )
+
+  const handleDownload = async (categoryId: string, categoryName: string, categoryImageUrl?: string | null) => {
     if (!allBaseModels || !allOptionGroups || !allOptions) {
       toast.error('Katalogdaten werden noch geladen...')
       return
@@ -57,7 +65,24 @@ export function BlankPdfButtons() {
         })),
       }
 
-      const pdfBytes = await generateBlankFormPdf(categoryId, catalogData)
+      // Fetch logo and build settings for PDF
+      let logoBytesForBlank: Uint8Array | undefined
+      if (logoUrl) {
+        const res = await fetch(logoUrl)
+        logoBytesForBlank = new Uint8Array(await res.arrayBuffer())
+      }
+      const settingsMap = allSettings
+        ? Object.fromEntries(allSettings.map((s) => [s.key, s.value]))
+        : undefined
+
+      // Fetch category image
+      let categoryImageBytes: Uint8Array | undefined
+      if (categoryImageUrl) {
+        const res = await fetch(categoryImageUrl)
+        categoryImageBytes = new Uint8Array(await res.arrayBuffer())
+      }
+
+      const pdfBytes = await generateBlankFormPdf(categoryId, catalogData, logoBytesForBlank, settingsMap, categoryImageBytes)
       const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -83,7 +108,7 @@ export function BlankPdfButtons() {
           key={cat._id}
           variant="outline"
           disabled={generatingId === cat._id}
-          onClick={() => handleDownload(cat._id, cat.name)}
+          onClick={() => handleDownload(cat._id, cat.name, cat.imageUrl)}
         >
           {generatingId === cat._id ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
