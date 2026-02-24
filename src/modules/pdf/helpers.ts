@@ -85,7 +85,7 @@ export function newPage(ctx: PDFContext) {
 }
 
 export function checkPageBreak(ctx: PDFContext, neededHeight: number) {
-  if (ctx.y - neededHeight < 60) {
+  if (ctx.y - neededHeight < 95) {
     newPage(ctx)
   }
 }

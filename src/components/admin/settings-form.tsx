@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +15,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { PdfPreview } from '@/components/admin/pdf-preview'
+import { ImageUpload } from '@/components/admin/image-upload'
 import { toast } from 'sonner'
 import { Save, ChevronDown } from 'lucide-react'
 
@@ -32,6 +34,15 @@ const SETTING_KEYS = [
   'bankName1',
   'bankIban1',
   'bankBic1',
+  'bankName2',
+  'bankIban2',
+  'bankBic2',
+  'companyLegalName',
+  'companyRegister',
+  'companyCeo',
+  'companyTaxOffice',
+  'companyVatId',
+  'logoStorageId',
   // Extended PDF settings
   'pdfFontSizeBody',
   'pdfFontSizeHeading',
@@ -58,6 +69,11 @@ export function SettingsForm() {
   const [initialized, setInitialized] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showAdvancedPdf, setShowAdvancedPdf] = useState(false)
+
+  const logoUrl = useQuery(
+    api.files.getUrl,
+    values.logoStorageId ? { storageId: values.logoStorageId as Id<'_storage'> } : 'skip',
+  )
 
   // Initialize form values when settings load
   useEffect(() => {
@@ -413,10 +429,10 @@ export function SettingsForm() {
         </CardContent>
       </Card>
 
-      {/* ---- Bank ---- */}
+      {/* ---- Bank 1 ---- */}
       <Card>
         <CardHeader>
-          <CardTitle>Bank</CardTitle>
+          <CardTitle>Bankverbindung 1</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -446,6 +462,110 @@ export function SettingsForm() {
         </CardContent>
       </Card>
 
+      {/* ---- Bank 2 ---- */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Bankverbindung 2</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <Label htmlFor="bankName2">Bankname</Label>
+            <Input
+              id="bankName2"
+              value={values.bankName2 ?? ''}
+              onChange={(e) => update('bankName2', e.target.value)}
+              placeholder="z.B. Volksbank Oldenburg"
+            />
+          </div>
+          <div>
+            <Label htmlFor="bankIban2">IBAN</Label>
+            <Input
+              id="bankIban2"
+              value={values.bankIban2 ?? ''}
+              onChange={(e) => update('bankIban2', e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="bankBic2">BIC</Label>
+            <Input
+              id="bankBic2"
+              value={values.bankBic2 ?? ''}
+              onChange={(e) => update('bankBic2', e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ---- Rechtliches / Impressum ---- */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Rechtliches / Impressum</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <Label htmlFor="companyLegalName">Pers. haftende Gesellschafterin</Label>
+            <Input
+              id="companyLegalName"
+              value={values.companyLegalName ?? ''}
+              onChange={(e) => update('companyLegalName', e.target.value)}
+              placeholder="z.B. Wiggers Verwaltungs-GmbH"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="companyRegister">Handelsregister</Label>
+            <Input
+              id="companyRegister"
+              value={values.companyRegister ?? ''}
+              onChange={(e) => update('companyRegister', e.target.value)}
+              placeholder="z.B. HRB 12345, HRA 67890"
+            />
+          </div>
+          <div>
+            <Label htmlFor="companyCeo">Geschaeftsfuehrer</Label>
+            <Input
+              id="companyCeo"
+              value={values.companyCeo ?? ''}
+              onChange={(e) => update('companyCeo', e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="companyTaxOffice">Finanzamt</Label>
+            <Input
+              id="companyTaxOffice"
+              value={values.companyTaxOffice ?? ''}
+              onChange={(e) => update('companyTaxOffice', e.target.value)}
+              placeholder="z.B. Oldenburg"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="companyVatId">USt-Id-Nr.</Label>
+            <Input
+              id="companyVatId"
+              value={values.companyVatId ?? ''}
+              onChange={(e) => update('companyVatId', e.target.value)}
+              placeholder="z.B. DE123456789"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ---- Logo ---- */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Firmenlogo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Das Logo wird im PDF-Header anstelle des Firmennamens angezeigt.
+          </p>
+          <ImageUpload
+            storageId={values.logoStorageId || undefined}
+            onChange={(id) => update('logoStorageId', id ?? '')}
+            label="Logo hochladen (PNG/JPG)"
+          />
+        </CardContent>
+      </Card>
+
       <Separator />
 
       <div className="flex justify-end">
@@ -456,7 +576,7 @@ export function SettingsForm() {
       </div>
 
       {/* ---- PDF Live Preview ---- */}
-      <PdfPreview settingsMap={values} />
+      <PdfPreview settingsMap={values} logoUrl={logoUrl} />
     </div>
   )
 }

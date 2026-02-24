@@ -13,10 +13,13 @@ import {
   drawCorporateHeader,
   drawCorporateFooter,
   drawAccentStripe,
+  embedLogoImage,
   hexToRgb,
+  FOOTER_SAFE_Y,
   type CorporateSettings,
 } from './corporate'
 import type { PDFContext } from './helpers'
+import type { PDFImage } from 'pdf-lib'
 
 /** Data shape for base models used in blank PDF generation */
 export interface BlankPdfBaseModel {
@@ -63,7 +66,7 @@ function applyPageBranding(ctx: PDFContext, settings: CorporateSettings) {
 }
 
 function ensureSpace(ctx: PDFContext, settings: CorporateSettings, neededHeight: number) {
-  if (ctx.y - neededHeight < 60) {
+  if (ctx.y - neededHeight < FOOTER_SAFE_Y) {
     newPage(ctx)
     applyPageBranding(ctx, settings)
   }
@@ -126,10 +129,17 @@ function drawSectionHeader(
 export async function generateBlankFormPdf(
   categoryId: string,
   catalogData: BlankPdfCatalogData,
+  logoBytes?: Uint8Array,
 ): Promise<Uint8Array> {
   const ctx = await createContext()
   const settings = await loadCorporateSettings()
   const rightEdge = ctx.pageWidth - ctx.margin
+
+  // Embed logo if provided
+  let logoImage: PDFImage | undefined
+  if (logoBytes) {
+    logoImage = await embedLogoImage(ctx.doc, logoBytes)
+  }
 
   // Corporate header
   ctx.y = drawCorporateHeader(
@@ -138,6 +148,7 @@ export async function generateBlankFormPdf(
     settings,
     'BESTELLFORMULAR',
     ctx.pageWidth,
+    logoImage,
   )
   applyPageBranding(ctx, settings)
 

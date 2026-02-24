@@ -85,6 +85,7 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
   const updateDocument = useMutation(api.documents.updateDocument)
   const createVersion = useMutation(api.documentVersions.create)
   const findOrCreateCustomer = useMutation(api.customers.findOrCreate)
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl)
 
   const [customer, setCustomer] = useState<CustomerData>({
     company: '',
@@ -154,6 +155,28 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
     return Object.keys(newErrors).length === 0
   }
 
+  /** Upload signature data URL to Convex storage, returns storageId */
+  async function uploadSignature(): Promise<string | undefined> {
+    if (!signatureDataUrl) return undefined
+    try {
+      // Convert data URL to blob
+      const res = await fetch(signatureDataUrl)
+      const blob = await res.blob()
+      // Upload to Convex storage
+      const uploadUrl = await generateUploadUrl()
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': blob.type },
+        body: blob,
+      })
+      const { storageId } = await uploadRes.json()
+      return storageId as string
+    } catch (err) {
+      console.error('Signature upload failed:', err)
+      return undefined
+    }
+  }
+
   function handleSubmitClick() {
     if (!validate()) return
     if (isEditing) {
@@ -198,6 +221,9 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
         marketingConsentDate: marketingConsent ? Date.now() : undefined,
       })
 
+      // Upload signature if present
+      const signatureStorageId = await uploadSignature()
+
       const id = await createDocument({
         documentNo,
         documentType,
@@ -220,6 +246,7 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
         selectedBaseModelId,
         selectedOptions: Object.values(selectedOptions),
         notes: notes.trim() || undefined,
+        signatureStorageId: signatureStorageId as Id<"_storage"> | undefined,
       })
 
       reset()
@@ -277,6 +304,9 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
         marketingConsentDate: marketingConsent ? Date.now() : undefined,
       })
 
+      // Upload signature if present
+      const signatureStorageId = await uploadSignature()
+
       // Update the document
       await updateDocument({
         id: editingDocumentId as Id<"documents">,
@@ -298,6 +328,7 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
         selectedBaseModelId,
         selectedOptions: Object.values(selectedOptions),
         notes: notes.trim() || undefined,
+        signatureStorageId: signatureStorageId as Id<"_storage"> | undefined,
       })
 
       reset()

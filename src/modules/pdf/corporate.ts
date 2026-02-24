@@ -1,4 +1,4 @@
-import { rgb, type PDFPage, type PDFFont } from 'pdf-lib'
+import { rgb, type PDFPage, type PDFFont, type PDFDocument, type PDFImage } from 'pdf-lib'
 
 export interface CorporateSettings {
   companyName: string
@@ -22,6 +22,7 @@ export interface CorporateSettings {
   companyVatId: string
   pdfColorPrimary: string
   pdfColorAccent: string
+  logoStorageId: string
   // Extended PDF settings
   pdfFontSizeBody: number
   pdfFontSizeHeading: number
@@ -60,6 +61,7 @@ const DEFAULTS: CorporateSettings = {
   companyVatId: '',
   pdfColorPrimary: '#1E3A5F',
   pdfColorAccent: '#D4A843',
+  logoStorageId: '',
   pdfFontSizeBody: 9,
   pdfFontSizeHeading: 11,
   pdfFontSizeFooter: 6.5,
@@ -115,6 +117,7 @@ export function buildCorporateSettings(
     companyVatId: str('companyVatId', DEFAULTS.companyVatId),
     pdfColorPrimary: str('pdfColorPrimary', DEFAULTS.pdfColorPrimary),
     pdfColorAccent: str('pdfColorAccent', DEFAULTS.pdfColorAccent),
+    logoStorageId: str('logoStorageId', DEFAULTS.logoStorageId),
     pdfFontSizeBody: num('pdfFontSizeBody', DEFAULTS.pdfFontSizeBody),
     pdfFontSizeHeading: num('pdfFontSizeHeading', DEFAULTS.pdfFontSizeHeading),
     pdfFontSizeFooter: num('pdfFontSizeFooter', DEFAULTS.pdfFontSizeFooter),
@@ -163,6 +166,7 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } {
 
 /**
  * Draws the corporate header bar with document title.
+ * Optionally embeds a logo image.
  * Returns the new Y position after the header.
  */
 export function drawCorporateHeader(
@@ -171,6 +175,7 @@ export function drawCorporateHeader(
   settings: CorporateSettings,
   docTitle: string,
   pageWidth: number,
+  logoImage?: PDFImage,
 ): number {
   const headerHeight = settings.pdfHeaderHeight
   const stripeWidth = settings.pdfAccentStripeWidth
@@ -196,35 +201,55 @@ export function drawCorporateHeader(
     color: rgb(accent.r, accent.g, accent.b),
   })
 
-  // Company name (white, top-left)
-  page.drawText(settings.companyName, {
-    x: stripeWidth + 12,
-    y: headerY + headerHeight - 25,
-    size: settings.pdfFontSizeHeading,
-    font: fonts.bold,
-    color: rgb(1, 1, 1),
-  })
-
-  // Address line or custom header lines
-  const headerLine = settings.pdfHeaderLine1 ||
-    `${settings.companyStreet} | ${settings.companyZip} ${settings.companyCity}`
-  page.drawText(headerLine, {
-    x: stripeWidth + 12,
-    y: headerY + headerHeight - 40,
-    size: 7,
-    font: fonts.regular,
-    color: rgb(0.85, 0.85, 0.85),
-  })
-
-  // Optional slogan or second header line
-  if (settings.pdfSlogan || settings.pdfHeaderLine2) {
-    page.drawText(settings.pdfSlogan || settings.pdfHeaderLine2, {
-      x: stripeWidth + 12,
-      y: headerY + headerHeight - 52,
-      size: 6.5,
-      font: fonts.regular,
-      color: rgb(0.75, 0.75, 0.75),
+  // Logo or company name on the left
+  const textStartX = stripeWidth + 12
+  if (logoImage) {
+    const maxLogoH = headerHeight - 16
+    const maxLogoW = 180
+    const aspect = logoImage.width / logoImage.height
+    let logoH = maxLogoH
+    let logoW = logoH * aspect
+    if (logoW > maxLogoW) {
+      logoW = maxLogoW
+      logoH = logoW / aspect
+    }
+    page.drawImage(logoImage, {
+      x: textStartX,
+      y: headerY + (headerHeight - logoH) / 2,
+      width: logoW,
+      height: logoH,
     })
+  } else {
+    // Company name (white, top-left)
+    page.drawText(settings.companyName, {
+      x: textStartX,
+      y: headerY + headerHeight - 25,
+      size: settings.pdfFontSizeHeading,
+      font: fonts.bold,
+      color: rgb(1, 1, 1),
+    })
+
+    // Address line or custom header lines
+    const headerLine = settings.pdfHeaderLine1 ||
+      `${settings.companyStreet} | ${settings.companyZip} ${settings.companyCity}`
+    page.drawText(headerLine, {
+      x: textStartX,
+      y: headerY + headerHeight - 40,
+      size: 7,
+      font: fonts.regular,
+      color: rgb(0.85, 0.85, 0.85),
+    })
+
+    // Optional slogan or second header line
+    if (settings.pdfSlogan || settings.pdfHeaderLine2) {
+      page.drawText(settings.pdfSlogan || settings.pdfHeaderLine2, {
+        x: textStartX,
+        y: headerY + headerHeight - 52,
+        size: 6.5,
+        font: fonts.regular,
+        color: rgb(0.75, 0.75, 0.75),
+      })
+    }
   }
 
   // Document title (white, right-aligned, large)
@@ -232,7 +257,7 @@ export function drawCorporateHeader(
   const titleWidth = fonts.bold.widthOfTextAtSize(docTitle, titleSize)
   page.drawText(docTitle, {
     x: pageWidth - titleWidth - 20,
-    y: headerY + headerHeight - 30,
+    y: headerY + (headerHeight - titleSize) / 2,
     size: titleSize,
     font: fonts.bold,
     color: rgb(1, 1, 1),
@@ -240,6 +265,9 @@ export function drawCorporateHeader(
 
   return headerY - 20 // Y position below header with spacing
 }
+
+/** Minimum Y below which document content must not go (above footer). */
+export const FOOTER_SAFE_Y = 95
 
 /**
  * Draws the corporate footer with 3 columns:
@@ -251,7 +279,7 @@ export function drawCorporateFooter(
   settings: CorporateSettings,
   pageWidth: number,
 ): void {
-  const footerTop = 52
+  const footerTop = 78
   const fontSize = settings.pdfFontSizeFooter
   const lineHeight = fontSize + 2.5
   const color = rgb(0.5, 0.5, 0.5)
@@ -262,22 +290,37 @@ export function drawCorporateFooter(
   const col2X = ml + contentWidth * 0.35
   const col3X = ml + contentWidth * 0.68
 
-  // Thin line above footer
+  // Thin line above footer with proper spacing
   page.drawLine({
-    start: { x: ml, y: footerTop + 4 },
-    end: { x: pageWidth - mr, y: footerTop + 4 },
+    start: { x: ml, y: footerTop + 12 },
+    end: { x: pageWidth - mr, y: footerTop + 12 },
     thickness: 0.5,
     color: rgb(0.8, 0.8, 0.8),
   })
 
-  function drawCol(x: number, lines: string[]) {
+  function drawCol(x: number, lines: string[], maxWidth?: number) {
     let y = footerTop
     for (const line of lines) {
       if (!line) continue
-      page.drawText(line, { x, y, size: fontSize, font: fonts.regular, color })
+      // Truncate text if it would overflow column width
+      let displayText = line
+      if (maxWidth) {
+        const textW = fonts.regular.widthOfTextAtSize(displayText, fontSize)
+        if (textW > maxWidth) {
+          while (fonts.regular.widthOfTextAtSize(displayText + '…', fontSize) > maxWidth && displayText.length > 1) {
+            displayText = displayText.slice(0, -1)
+          }
+          displayText += '…'
+        }
+      }
+      page.drawText(displayText, { x, y, size: fontSize, font: fonts.regular, color })
       y -= lineHeight
     }
   }
+
+  const col1Width = (col2X - col1X) - 4
+  const col2Width = (col3X - col2X) - 4
+  const col3Width = (pageWidth - mr) - col3X
 
   // Column 1: Company info
   drawCol(col1X, [
@@ -288,7 +331,7 @@ export function drawCorporateFooter(
     settings.companyFax ? `Fax: ${settings.companyFax}` : '',
     settings.companyEmail,
     settings.companyWeb,
-  ])
+  ], col1Width)
 
   // Column 2: Bank connections
   const bankLines: string[] = []
@@ -298,12 +341,12 @@ export function drawCorporateFooter(
     if (settings.bankBic1) bankLines.push(`BIC: ${settings.bankBic1}`)
   }
   if (settings.bankName2) {
-    bankLines.push('') // spacer
+    if (bankLines.length > 0) bankLines.push('') // spacer only if bank1 exists
     bankLines.push(settings.bankName2)
     if (settings.bankIban2) bankLines.push(`IBAN: ${settings.bankIban2}`)
     if (settings.bankBic2) bankLines.push(`BIC: ${settings.bankBic2}`)
   }
-  drawCol(col2X, bankLines)
+  drawCol(col2X, bankLines, col2Width)
 
   // Column 3: Legal info
   drawCol(col3X, [
@@ -312,7 +355,28 @@ export function drawCorporateFooter(
     settings.companyCeo ? `GF: ${settings.companyCeo}` : '',
     settings.companyTaxOffice ? `FA: ${settings.companyTaxOffice}` : '',
     settings.companyVatId ? `USt-Id: ${settings.companyVatId}` : '',
-  ])
+  ], col3Width)
+}
+
+/**
+ * Embeds a logo image into the PDF document from raw bytes.
+ * Supports PNG and JPEG formats.
+ */
+export async function embedLogoImage(
+  doc: PDFDocument,
+  logoBytes: Uint8Array,
+): Promise<PDFImage | undefined> {
+  try {
+    // Try PNG first, then JPEG
+    try {
+      return await doc.embedPng(logoBytes)
+    } catch {
+      return await doc.embedJpg(logoBytes)
+    }
+  } catch {
+    console.warn('Could not embed logo image — unsupported format')
+    return undefined
+  }
 }
 
 /**

@@ -15,9 +15,12 @@ import {
   drawCorporateHeader,
   drawCorporateFooter,
   drawAccentStripe,
+  embedLogoImage,
+  FOOTER_SAFE_Y,
   type CorporateSettings,
 } from './corporate'
 import type { PDFContext } from './helpers'
+import type { PDFImage } from 'pdf-lib'
 
 /** Shape of a Convex document as passed from the UI */
 interface ConvexDocument {
@@ -27,6 +30,12 @@ interface ConvexDocument {
   pricing: PricingSummary
   notes?: string
   _creationTime: number
+}
+
+/** Optional image data for PDF embedding */
+interface PdfImages {
+  logoBytes?: Uint8Array
+  signatureBytes?: Uint8Array
 }
 
 const typeLabel: Record<string, string> = {
@@ -47,10 +56,19 @@ function applyPageBranding(
   drawCorporateFooter(ctx.page, { regular: ctx.font }, settings, ctx.pageWidth)
 }
 
-export async function generateDocumentPdf(doc: ConvexDocument): Promise<Uint8Array> {
+export async function generateDocumentPdf(
+  doc: ConvexDocument,
+  images?: PdfImages,
+): Promise<Uint8Array> {
   const ctx = await createContext()
   const settings = await loadCorporateSettings()
   const rightEdge = ctx.pageWidth - ctx.margin
+
+  // Embed logo if provided
+  let logoImage: PDFImage | undefined
+  if (images?.logoBytes) {
+    logoImage = await embedLogoImage(ctx.doc, images.logoBytes)
+  }
 
   // Corporate header
   const docTitle = typeLabel[doc.documentType] ?? 'DOKUMENT'
@@ -60,6 +78,7 @@ export async function generateDocumentPdf(doc: ConvexDocument): Promise<Uint8Arr
     settings,
     docTitle,
     ctx.pageWidth,
+    logoImage,
   )
 
   // Page branding (accent stripe + footer)
@@ -67,7 +86,7 @@ export async function generateDocumentPdf(doc: ConvexDocument): Promise<Uint8Arr
 
   // Page-break helper that brands new pages
   const checkPageBreak = (neededHeight: number) => {
-    if (ctx.y - neededHeight < 70) {
+    if (ctx.y - neededHeight < FOOTER_SAFE_Y) {
       newPage(ctx)
       applyPageBranding(ctx, settings)
     }
@@ -222,6 +241,36 @@ export async function generateDocumentPdf(doc: ConvexDocument): Promise<Uint8Arr
     const lineWidth = 180
     const leftLineX = ctx.margin
     const rightLineX = rightEdge - lineWidth
+
+    // Embed signature image if provided
+    if (images?.signatureBytes) {
+      try {
+        let sigImage
+        try {
+          sigImage = await ctx.doc.embedPng(images.signatureBytes)
+        } catch {
+          sigImage = await ctx.doc.embedJpg(images.signatureBytes)
+        }
+        const sigMaxW = lineWidth
+        const sigMaxH = 50
+        const aspect = sigImage.width / sigImage.height
+        let sigW = sigMaxW
+        let sigH = sigW / aspect
+        if (sigH > sigMaxH) {
+          sigH = sigMaxH
+          sigW = sigH * aspect
+        }
+        ctx.page.drawImage(sigImage, {
+          x: rightLineX + (lineWidth - sigW) / 2,
+          y: ctx.y,
+          width: sigW,
+          height: sigH,
+        })
+        moveDown(ctx, sigH + 4)
+      } catch {
+        // Signature image could not be embedded — skip
+      }
+    }
 
     // Signature lines
     ctx.page.drawLine({

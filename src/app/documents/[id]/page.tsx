@@ -41,12 +41,34 @@ export default function DocumentPage() {
   const allBaseModels = useQuery(api.baseModels.list)
   const allOptionGroups = useQuery(api.optionGroups.list)
   const allOptions = useQuery(api.options.list)
+  const allSettings = useQuery(api.settings.list)
+
+  // Resolve storage URLs for signature and logo
+  const signatureUrl = useQuery(
+    api.files.getUrl,
+    doc?.signatureStorageId ? { storageId: doc.signatureStorageId } : 'skip',
+  )
+  const logoStorageId = allSettings?.find((s) => s.key === 'logoStorageId')?.value as string | undefined
+  const logoUrl = useQuery(
+    api.files.getUrl,
+    logoStorageId ? { storageId: logoStorageId as Id<"_storage"> } : 'skip',
+  )
+
+  /** Fetch image bytes from a URL */
+  async function fetchImageBytes(url: string): Promise<Uint8Array> {
+    const res = await fetch(url)
+    const buf = await res.arrayBuffer()
+    return new Uint8Array(buf)
+  }
 
   async function handleDownloadPdf() {
     if (!doc) return
     try {
       const { generateDocumentPdf } = await import('@/modules/pdf')
-      const bytes = await generateDocumentPdf(doc)
+      const images: { logoBytes?: Uint8Array; signatureBytes?: Uint8Array } = {}
+      if (logoUrl) images.logoBytes = await fetchImageBytes(logoUrl)
+      if (signatureUrl) images.signatureBytes = await fetchImageBytes(signatureUrl)
+      const bytes = await generateDocumentPdf(doc, images)
       downloadPdf(bytes, `${doc.documentNo}.pdf`)
       toast.success('PDF heruntergeladen')
     } catch (err) {
@@ -91,7 +113,9 @@ export default function DocumentPage() {
         })),
       }
 
-      const bytes = await generateBlankFormPdf(doc.selectedCategory, catalogData)
+      let logoBytesForBlank: Uint8Array | undefined
+      if (logoUrl) logoBytesForBlank = await fetchImageBytes(logoUrl)
+      const bytes = await generateBlankFormPdf(doc.selectedCategory, catalogData, logoBytesForBlank)
       downloadPdf(bytes, `Blanko-${doc.documentNo}.pdf`)
       toast.success('Blanko-PDF heruntergeladen')
     } catch (err) {

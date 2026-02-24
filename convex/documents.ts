@@ -112,6 +112,7 @@ export const create = mutation({
     selectedBaseModelId: v.string(),
     selectedOptions: v.array(selectedOptionValidator),
     notes: v.optional(v.string()),
+    signatureStorageId: v.optional(v.id('_storage')),
     createdBy: v.optional(v.id('users')),
   },
   handler: async (ctx, args) => {
@@ -138,6 +139,7 @@ export const updateDocument = mutation({
     selectedBaseModelId: v.optional(v.string()),
     selectedOptions: v.optional(v.array(selectedOptionValidator)),
     notes: v.optional(v.string()),
+    signatureStorageId: v.optional(v.id('_storage')),
     customerId: v.optional(v.id('customers')),
   },
   handler: async (ctx, args) => {

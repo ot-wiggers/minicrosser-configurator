@@ -9,14 +9,16 @@ import {
   drawCorporateHeader,
   drawCorporateFooter,
   drawAccentStripe,
+  embedLogoImage,
   type CorporateSettings,
 } from '@/modules/pdf/corporate'
 
 interface PdfPreviewProps {
   settingsMap: Record<string, string>
+  logoUrl?: string | null
 }
 
-async function generatePreviewPdf(settings: CorporateSettings): Promise<Uint8Array> {
+async function generatePreviewPdf(settings: CorporateSettings, logoUrl?: string | null): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib')
   const doc = await PDFDocument.create()
   const page = doc.addPage([595.28, 841.89]) // A4
@@ -25,6 +27,16 @@ async function generatePreviewPdf(settings: CorporateSettings): Promise<Uint8Arr
   const pageWidth = page.getWidth()
   const pageHeight = page.getHeight()
 
+  // Embed logo if available
+  let logoImage
+  if (logoUrl) {
+    try {
+      const res = await fetch(logoUrl)
+      const buf = await res.arrayBuffer()
+      logoImage = await embedLogoImage(doc, new Uint8Array(buf))
+    } catch { /* ignore */ }
+  }
+
   // Draw header
   const y = drawCorporateHeader(
     page,
@@ -32,6 +44,7 @@ async function generatePreviewPdf(settings: CorporateSettings): Promise<Uint8Arr
     settings,
     'ANGEBOT',
     pageWidth,
+    logoImage,
   )
 
   // Draw accent stripe on body pages
@@ -174,7 +187,7 @@ async function generatePreviewPdf(settings: CorporateSettings): Promise<Uint8Arr
   return doc.save()
 }
 
-export function PdfPreview({ settingsMap }: PdfPreviewProps) {
+export function PdfPreview({ settingsMap, logoUrl }: PdfPreviewProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
   const debounceTimer = useRef<NodeJS.Timeout | null>(null)
@@ -183,7 +196,7 @@ export function PdfPreview({ settingsMap }: PdfPreviewProps) {
     setGenerating(true)
     try {
       const settings = buildCorporateSettings(map)
-      const bytes = await generatePreviewPdf(settings)
+      const bytes = await generatePreviewPdf(settings, logoUrl)
       const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       setPdfUrl((prev) => {
@@ -195,16 +208,16 @@ export function PdfPreview({ settingsMap }: PdfPreviewProps) {
     } finally {
       setGenerating(false)
     }
-  }, [])
+  }, [logoUrl])
 
-  // Debounced auto-update when settings change
+  // Debounced auto-update when settings or logo change
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current)
     debounceTimer.current = setTimeout(() => generate(settingsMap), 800)
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current)
     }
-  }, [settingsMap, generate])
+  }, [settingsMap, logoUrl, generate])
 
   // Cleanup blob URL on unmount
   useEffect(() => {
