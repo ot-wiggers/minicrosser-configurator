@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { ImageLightbox } from '@/components/ui/image-lightbox'
 import { Plus, Pencil, Trash2, Car } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
@@ -127,11 +128,13 @@ export default function ModelsPage() {
                 <TableRow key={model._id}>
                   <TableCell>
                     {model.imageUrl ? (
-                      <img
-                        src={model.imageUrl}
-                        alt={model.name}
-                        className="h-10 w-10 rounded object-cover"
-                      />
+                      <ImageLightbox src={model.imageUrl} alt={model.name}>
+                        <img
+                          src={model.imageUrl}
+                          alt={model.name}
+                          className="h-10 w-10 rounded object-cover"
+                        />
+                      </ImageLightbox>
                     ) : (
                       <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
                         <Car className="h-5 w-5 text-muted-foreground" />

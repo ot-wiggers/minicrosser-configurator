@@ -15,6 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { ImageLightbox } from '@/components/ui/image-lightbox'
 import { Plus, Pencil, Trash2, FolderOpen } from 'lucide-react'
 
 export default function CategoriesPage() {
@@ -87,11 +88,13 @@ export default function CategoriesPage() {
                 <TableRow key={category._id}>
                   <TableCell>
                     {category.imageUrl ? (
-                      <img
-                        src={category.imageUrl}
-                        alt={category.name}
-                        className="h-12 w-12 rounded-md border object-cover"
-                      />
+                      <ImageLightbox src={category.imageUrl} alt={category.name}>
+                        <img
+                          src={category.imageUrl}
+                          alt={category.name}
+                          className="h-12 w-12 rounded-md border object-cover"
+                        />
+                      </ImageLightbox>
                     ) : (
                       <div className="flex h-12 w-12 items-center justify-center rounded-md border bg-muted">
                         <FolderOpen className="h-5 w-5 text-muted-foreground" />

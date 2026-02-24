@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { ImageLightbox } from '@/components/ui/image-lightbox'
 import { Plus, Pencil, Trash2, ListChecks } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
@@ -117,11 +118,13 @@ export default function OptionsPage() {
                 <TableRow key={opt._id}>
                   <TableCell>
                     {opt.imageUrl ? (
-                      <img
-                        src={opt.imageUrl}
-                        alt={opt.name}
-                        className="h-8 w-8 rounded object-cover"
-                      />
+                      <ImageLightbox src={opt.imageUrl} alt={opt.name}>
+                        <img
+                          src={opt.imageUrl}
+                          alt={opt.name}
+                          className="h-8 w-8 rounded object-cover"
+                        />
+                      </ImageLightbox>
                     ) : (
                       <div className="h-8 w-8 rounded bg-muted" />
                     )}
