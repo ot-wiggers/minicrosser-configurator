@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -46,6 +46,23 @@ function OptionFormInner({
   const [isActive, setIsActive] = useState(option?.isActive ?? true)
   const [isDefault, setIsDefault] = useState(option?.isDefault ?? false)
   const [imageStorageId, setImageStorageId] = useState<string | undefined>(option?.imageStorageId as string | undefined)
+
+  // Populate form when option data loads (query is async)
+  useEffect(() => {
+    if (option) {
+      setOptionGroupId(option.optionGroupId)
+      setSkuCode(option.skuCode)
+      setArticleNo(option.articleNo)
+      setName(option.name)
+      setDescription(option.description ?? '')
+      setPriceNet(String(option.priceNet))
+      setPriceGross(String(option.priceGross))
+      setSortOrder(String(option.sortOrder))
+      setIsActive(option.isActive)
+      setIsDefault(option.isDefault)
+      setImageStorageId(option.imageStorageId as string | undefined)
+    }
+  }, [option])
 
   function handlePriceNetChange(value: string) {
     setPriceNet(value)
