@@ -25,12 +25,6 @@ interface OptionFormProps {
 /** Section for managing per-model color variant images (only for color options). */
 function ColorVariantSection({ optionId }: { optionId: string }) {
   const baseModels = useQuery(api.baseModels.list)
-  const variantImages = useQuery(api.colorVariantImages.listByModel, baseModels?.[0]
-    ? { baseModelId: baseModels[0]._id }
-    : 'skip',
-  )
-  // Query all variant images for this option across all models
-  // We query per-model inside the sub-component instead.
 
   if (!baseModels) return null
 

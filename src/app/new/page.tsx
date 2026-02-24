@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useConfiguratorStore } from '@/modules/configurator'
 import { Stepper } from '@/components/configurator/stepper'
@@ -14,7 +14,7 @@ import { ViewToggle } from '@/components/configurator/view-toggle'
 
 const STORAGE_KEY = 'configuratorView'
 
-export default function ConfiguratorPage() {
+function ConfiguratorContent() {
   const { currentStep, documentType } = useConfiguratorStore()
   const [showCustomerDialog, setShowCustomerDialog] = useState(false)
   const searchParams = useSearchParams()
@@ -87,5 +87,13 @@ export default function ConfiguratorPage() {
         onOpenChange={setShowCustomerDialog}
       />
     </div>
+  )
+}
+
+export default function ConfiguratorPage() {
+  return (
+    <Suspense>
+      <ConfiguratorContent />
+    </Suspense>
   )
 }
