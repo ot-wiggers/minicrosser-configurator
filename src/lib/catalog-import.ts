@@ -81,17 +81,24 @@ export async function parseCatalogXlsx(buffer: ArrayBuffer): Promise<ParseResult
   )
 
   const baseModels = validateBaseModels(
-    modelRows.map((r) => ({
-      categoryRef: String(r.categoryRef ?? ''),
-      skuCode: String(r.skuCode ?? ''),
-      articleNo: String(r.articleNo ?? ''),
-      name: String(r.name ?? ''),
-      description: r.description ? String(r.description) : null,
-      priceNet: Number(r.priceNet ?? 0),
-      priceGross: Number(r.priceGross ?? 0),
-      sortOrder: Number(r.sortOrder ?? 0),
-      isActive: parseBool(r.isActive),
-    })),
+    modelRows.map((r) => {
+      let specs: Array<{ label: string; value: string }> = []
+      if (typeof r.specs === 'string' && r.specs.trim()) {
+        try { specs = JSON.parse(r.specs) } catch { /* ignore */ }
+      }
+      return {
+        categoryRef: String(r.categoryRef ?? ''),
+        skuCode: String(r.skuCode ?? ''),
+        articleNo: String(r.articleNo ?? ''),
+        name: String(r.name ?? ''),
+        description: r.description ? String(r.description) : null,
+        priceNet: Number(r.priceNet ?? 0),
+        priceGross: Number(r.priceGross ?? 0),
+        sortOrder: Number(r.sortOrder ?? 0),
+        isActive: parseBool(r.isActive),
+        specs,
+      } as any
+    }),
     errors,
   )
 
@@ -107,7 +114,10 @@ export async function parseCatalogXlsx(buffer: ArrayBuffer): Promise<ParseResult
       sortOrder: Number(r.sortOrder ?? 0),
       isActive: parseBool(r.isActive),
       isDefault: parseBool(r.isDefault),
-    })),
+      restrictToModels: typeof r.restrictToModels === 'string'
+        ? r.restrictToModels.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : [],
+    } as any)),
     errors,
   )
 
@@ -205,6 +215,7 @@ function validateBaseModels(items: ExportBaseModel[], errors: ParseRowError[]): 
       priceGross: Number(item.priceGross) || 0,
       sortOrder: Number(item.sortOrder) || 0,
       isActive: item.isActive ?? true,
+      specs: Array.isArray((item as any).specs) ? (item as any).specs.filter((s: any) => s.label && s.value) : [],
     })
   })
   return valid
@@ -237,6 +248,7 @@ function validateOptions(items: ExportOption[], errors: ParseRowError[]): Export
       sortOrder: Number(item.sortOrder) || 0,
       isActive: item.isActive ?? true,
       isDefault: item.isDefault ?? false,
+      restrictToModels: Array.isArray((item as any).restrictToModels) ? (item as any).restrictToModels : [],
     })
   })
   return valid

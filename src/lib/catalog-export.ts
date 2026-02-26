@@ -38,6 +38,7 @@ interface DbBaseModel {
   priceGross: number
   sortOrder: number
   isActive: boolean
+  specs?: Array<{ label: string; value: string }>
   [key: string]: unknown
 }
 
@@ -53,6 +54,7 @@ interface DbOption {
   sortOrder: number
   isActive: boolean
   isDefault: boolean
+  restrictToModels?: string[]
   [key: string]: unknown
 }
 
@@ -99,6 +101,8 @@ export function buildExportPayload(data: CatalogData): CatalogExportJson {
     isActive: g.isActive,
   }))
 
+  const modelIdToName = buildIdToNameMap(data.baseModels)
+
   const baseModels: ExportBaseModel[] = data.baseModels.map((m) => ({
     categoryRef: categoryIdToName.get(m.categoryId) ?? m.categoryId,
     skuCode: m.skuCode,
@@ -109,6 +113,7 @@ export function buildExportPayload(data: CatalogData): CatalogExportJson {
     priceGross: m.priceGross,
     sortOrder: m.sortOrder,
     isActive: m.isActive,
+    specs: m.specs ?? [],
   }))
 
   const options: ExportOption[] = data.options.map((o) => ({
@@ -122,6 +127,9 @@ export function buildExportPayload(data: CatalogData): CatalogExportJson {
     sortOrder: o.sortOrder,
     isActive: o.isActive,
     isDefault: o.isDefault,
+    restrictToModels: (o.restrictToModels ?? [])
+      .map((id) => modelIdToName.get(id) ?? id)
+      .filter(Boolean),
   }))
 
   return {
@@ -159,12 +167,20 @@ export async function exportCatalogToXlsx(data: CatalogData): Promise<ArrayBuffe
   const ogSheet = XLSX.utils.json_to_sheet(ogRows)
   XLSX.utils.book_append_sheet(wb, ogSheet, 'Optionsgruppen')
 
-  // Sheet 3: Modelle
-  const modelSheet = XLSX.utils.json_to_sheet(payload.baseModels)
+  // Sheet 3: Modelle — flatten specs to JSON string
+  const modelRows = payload.baseModels.map((m) => ({
+    ...m,
+    specs: m.specs.length > 0 ? JSON.stringify(m.specs) : '',
+  }))
+  const modelSheet = XLSX.utils.json_to_sheet(modelRows)
   XLSX.utils.book_append_sheet(wb, modelSheet, 'Modelle')
 
-  // Sheet 4: Optionen
-  const optSheet = XLSX.utils.json_to_sheet(payload.options)
+  // Sheet 4: Optionen — flatten restrictToModels to comma-separated string
+  const optRows = payload.options.map((o) => ({
+    ...o,
+    restrictToModels: o.restrictToModels.join(', '),
+  }))
+  const optSheet = XLSX.utils.json_to_sheet(optRows)
   XLSX.utils.book_append_sheet(wb, optSheet, 'Optionen')
 
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer

@@ -31,6 +31,7 @@ export const importCatalog = mutation({
         priceGross: v.number(),
         sortOrder: v.number(),
         isActive: v.boolean(),
+        specs: v.optional(v.array(v.object({ label: v.string(), value: v.string() }))),
       }),
     ),
     options: v.array(
@@ -45,6 +46,7 @@ export const importCatalog = mutation({
         sortOrder: v.number(),
         isActive: v.boolean(),
         isDefault: v.boolean(),
+        restrictToModels: v.optional(v.array(v.string())),
       }),
     ),
   },
@@ -168,6 +170,7 @@ export const importCatalog = mutation({
             priceGross: model.priceGross,
             sortOrder: model.sortOrder,
             isActive: model.isActive,
+            specs: model.specs,
           })
           result.baseModels.updated++
         } else {
@@ -181,6 +184,7 @@ export const importCatalog = mutation({
             priceGross: model.priceGross,
             sortOrder: model.sortOrder,
             isActive: model.isActive,
+            specs: model.specs,
           })
           result.baseModels.created++
         }
@@ -190,6 +194,13 @@ export const importCatalog = mutation({
     }
 
     // ── 4. Upsert Options ─────────────────────────────────────────
+    // Build model name → ID map for resolving restrictToModels
+    const modelNameToId = new Map<string, string>()
+    const allModels = await ctx.db.query('baseModels').collect()
+    for (const m of allModels) {
+      modelNameToId.set(m.name, m._id)
+    }
+
     for (const opt of args.options) {
       try {
         const groupId = groupNameToId.get(opt.optionGroupRef)
@@ -201,6 +212,11 @@ export const importCatalog = mutation({
           })
           continue
         }
+
+        // Resolve model names to IDs
+        const resolvedModelIds = (opt.restrictToModels ?? [])
+          .map((name) => modelNameToId.get(name) ?? name)
+          .filter(Boolean)
 
         const existing = await ctx.db
           .query('options')
@@ -218,6 +234,7 @@ export const importCatalog = mutation({
             sortOrder: opt.sortOrder,
             isActive: opt.isActive,
             isDefault: opt.isDefault,
+            restrictToModels: resolvedModelIds.length > 0 ? resolvedModelIds : undefined,
           })
           result.options.updated++
         } else {
@@ -232,6 +249,7 @@ export const importCatalog = mutation({
             sortOrder: opt.sortOrder,
             isActive: opt.isActive,
             isDefault: opt.isDefault,
+            restrictToModels: resolvedModelIds.length > 0 ? resolvedModelIds : undefined,
           })
           result.options.created++
         }

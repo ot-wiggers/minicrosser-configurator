@@ -27,6 +27,7 @@ export interface ExportBaseModel {
   priceGross: number
   sortOrder: number
   isActive: boolean
+  specs: Array<{ label: string; value: string }>
 }
 
 /** Shape of an option in export/import JSON. */
@@ -41,6 +42,7 @@ export interface ExportOption {
   sortOrder: number
   isActive: boolean
   isDefault: boolean
+  restrictToModels: string[]
 }
 
 /** Root shape of the exported JSON file. */
