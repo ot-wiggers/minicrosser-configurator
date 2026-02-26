@@ -141,7 +141,7 @@ export function exportCatalogToJson(data: CatalogData): string {
 
 // ── Export to XLSX ──────────────────────────────────────────────────
 
-export async function exportCatalogToXlsx(data: CatalogData): Promise<Uint8Array> {
+export async function exportCatalogToXlsx(data: CatalogData): Promise<ArrayBuffer> {
   const XLSX = await import('xlsx')
   const payload = buildExportPayload(data)
 
@@ -167,7 +167,7 @@ export async function exportCatalogToXlsx(data: CatalogData): Promise<Uint8Array
   const optSheet = XLSX.utils.json_to_sheet(payload.options)
   XLSX.utils.book_append_sheet(wb, optSheet, 'Optionen')
 
-  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
 }
 
 // ── Download helper ────────────────────────────────────────────────
@@ -191,7 +191,7 @@ export function downloadJsonExport(data: CatalogData) {
 
 export async function downloadXlsxExport(data: CatalogData) {
   const buffer = await exportCatalogToXlsx(data)
-  const blob = new Blob([buffer.buffer as ArrayBuffer], {
+  const blob = new Blob([buffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
   downloadBlob(blob, `katalog-export-${todayString()}.xlsx`)
