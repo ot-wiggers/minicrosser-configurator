@@ -563,7 +563,7 @@ export function SettingsForm() {
           <ImageUpload
             storageId={values.logoStorageId || undefined}
             onChange={(id) => update('logoStorageId', id ?? '')}
-            label="Logo hochladen (PNG/JPG)"
+            label="Logo hochladen (PNG/JPG/SVG)"
           />
           <div className="max-w-xs">
             <Label htmlFor="pdfLogoMaxHeight">Maximale Logo-Hoehe (pt)</Label>

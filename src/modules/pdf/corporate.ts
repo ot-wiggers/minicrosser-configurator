@@ -362,14 +362,63 @@ export function drawCorporateFooter(
 }
 
 /**
+ * Detects whether raw bytes represent an SVG image.
+ */
+function isSvg(bytes: Uint8Array): boolean {
+  // Check first 256 bytes for SVG markers
+  const head = new TextDecoder().decode(bytes.slice(0, 256))
+  return head.trimStart().startsWith('<svg') || head.trimStart().startsWith('<?xml')
+}
+
+/**
+ * Converts SVG bytes to high-resolution PNG bytes using browser Canvas.
+ * Renders at 3x scale for crisp PDF output.
+ */
+async function svgToPng(svgBytes: Uint8Array, scale = 3): Promise<Uint8Array> {
+  const svgText = new TextDecoder().decode(svgBytes)
+  const blob = new Blob([svgText], { type: 'image/svg+xml' })
+  const url = URL.createObjectURL(blob)
+
+  try {
+    const img = new Image()
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve()
+      img.onerror = () => reject(new Error('Failed to load SVG'))
+      img.src = url
+    })
+
+    const w = img.naturalWidth * scale
+    const h = img.naturalHeight * scale
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(img, 0, 0, w, h)
+
+    const pngBlob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), 'image/png')
+    })
+    return new Uint8Array(await pngBlob.arrayBuffer())
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+/**
  * Embeds a logo image into the PDF document from raw bytes.
- * Supports PNG and JPEG formats.
+ * Supports PNG, JPEG, and SVG formats. SVG is rasterized at 3x for crisp output.
  */
 export async function embedLogoImage(
   doc: PDFDocument,
   logoBytes: Uint8Array,
 ): Promise<PDFImage | undefined> {
   try {
+    // Convert SVG to PNG first
+    if (isSvg(logoBytes)) {
+      const pngBytes = await svgToPng(logoBytes)
+      return await doc.embedPng(pngBytes)
+    }
+
     // Try PNG first, then JPEG
     try {
       return await doc.embedPng(logoBytes)
