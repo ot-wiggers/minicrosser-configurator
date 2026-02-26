@@ -17,8 +17,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
+import { RichTextEditor } from '@/components/admin/rich-text-editor'
+import { Plus, Trash2 } from 'lucide-react'
 
 interface ModelFormProps {
   open: boolean
@@ -53,6 +54,7 @@ function ModelFormInner({
         sortOrder: model.sortOrder,
         isActive: model.isActive,
         imageStorageId: model.imageStorageId as string | undefined,
+        specs: (model.specs ?? []) as Array<{ label: string; value: string }>,
       }
     }
     return {
@@ -66,6 +68,7 @@ function ModelFormInner({
       sortOrder: 0,
       isActive: true,
       imageStorageId: undefined as string | undefined,
+      specs: [] as Array<{ label: string; value: string }>,
     }
   })
   const [grossOverridden, setGrossOverridden] = useState(() => {
@@ -88,6 +91,7 @@ function ModelFormInner({
         sortOrder: model.sortOrder,
         isActive: model.isActive,
         imageStorageId: model.imageStorageId as string | undefined,
+        specs: (model.specs ?? []) as Array<{ label: string; value: string }>,
       })
       const calculated = Math.round(model.priceNet * VAT_RATE * 100) / 100
       setGrossOverridden(Math.abs(model.priceGross - calculated) > 0.01)
@@ -143,6 +147,7 @@ function ModelFormInner({
           priceGross: form.priceGross,
           sortOrder: form.sortOrder,
           isActive: form.isActive,
+          specs: form.specs.filter((s) => s.label.trim() && s.value.trim()),
         }
         if (form.imageStorageId) {
           updateArgs.imageStorageId = form.imageStorageId
@@ -162,6 +167,7 @@ function ModelFormInner({
           priceGross: form.priceGross,
           sortOrder: form.sortOrder,
           isActive: form.isActive,
+          specs: form.specs.filter((s) => s.label.trim() && s.value.trim()),
         }
         if (form.imageStorageId) {
           createArgs.imageStorageId = form.imageStorageId
@@ -232,15 +238,13 @@ function ModelFormInner({
             />
           </div>
 
-          {/* Description */}
+          {/* Description (Rich Text) */}
           <div className="space-y-2">
-            <Label htmlFor="description">Beschreibung</Label>
-            <Textarea
-              id="description"
-              value={form.description}
-              onChange={(e) => updateField('description', e.target.value)}
+            <Label>Beschreibung</Label>
+            <RichTextEditor
+              content={form.description}
+              onChange={(html) => updateField('description', html)}
               placeholder="Optionale Beschreibung..."
-              rows={3}
             />
           </div>
 
@@ -313,6 +317,60 @@ function ModelFormInner({
               storageId={form.imageStorageId}
               onChange={(id) => updateField('imageStorageId', id)}
             />
+          </div>
+
+          {/* Technical Specs */}
+          <div className="space-y-2">
+            <Label>Technische Daten</Label>
+            {form.specs.map((spec, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Input
+                  placeholder="Bezeichnung"
+                  value={spec.label}
+                  onChange={(e) => {
+                    const next = [...form.specs]
+                    next[i] = { ...next[i], label: e.target.value }
+                    setForm((prev) => ({ ...prev, specs: next }))
+                  }}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="Wert"
+                  value={spec.value}
+                  onChange={(e) => {
+                    const next = [...form.specs]
+                    next[i] = { ...next[i], value: e.target.value }
+                    setForm((prev) => ({ ...prev, specs: next }))
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    const next = form.specs.filter((_, j) => j !== i)
+                    setForm((prev) => ({ ...prev, specs: next }))
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setForm((prev) => ({
+                  ...prev,
+                  specs: [...prev.specs, { label: '', value: '' }],
+                }))
+              }
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Zeile hinzufügen
+            </Button>
           </div>
 
           {/* Submit */}
