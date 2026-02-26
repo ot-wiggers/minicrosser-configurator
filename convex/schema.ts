@@ -23,6 +23,7 @@ export default defineSchema({
     imageStorageId: v.optional(v.id('_storage')),
     sortOrder: v.number(),
     isActive: v.boolean(),
+    specs: v.optional(v.array(v.object({ label: v.string(), value: v.string() }))),
   })
     .index('by_categoryId', ['categoryId', 'sortOrder'])
     .index('by_skuCode', ['skuCode'])
@@ -50,6 +51,7 @@ export default defineSchema({
     sortOrder: v.number(),
     isActive: v.boolean(),
     isDefault: v.boolean(),
+    restrictToModels: v.optional(v.array(v.string())),
   })
     .index('by_optionGroupId', ['optionGroupId', 'sortOrder'])
     .index('by_skuCode', ['skuCode'])
