@@ -15,6 +15,7 @@ import {
   ListChecks,
   Users,
   Contact,
+  ArrowLeftRight,
   LogOut,
 } from 'lucide-react'
 
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/admin/option-groups', label: 'Optionsgruppen', icon: Layers },
   { href: '/admin/options', label: 'Optionen', icon: ListChecks },
   { href: '/admin/customers', label: 'Kunden', icon: Contact },
+  { href: '/admin/import-export', label: 'Import/Export', icon: ArrowLeftRight },
   { href: '/admin/users', label: 'Benutzer', icon: Users },
   { href: '/admin/settings', label: 'Einstellungen', icon: Settings },
 ]
