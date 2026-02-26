@@ -11,6 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as authInternal from "../authInternal.js";
 import type * as baseModels from "../baseModels.js";
+import type * as catalogImport from "../catalogImport.js";
 import type * as categories from "../categories.js";
 import type * as colorVariantImages from "../colorVariantImages.js";
 import type * as customers from "../customers.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   authInternal: typeof authInternal;
   baseModels: typeof baseModels;
+  catalogImport: typeof catalogImport;
   categories: typeof categories;
   colorVariantImages: typeof colorVariantImages;
   customers: typeof customers;
