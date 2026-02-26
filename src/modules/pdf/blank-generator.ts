@@ -161,7 +161,7 @@ export async function generateBlankFormPdf(
   applyPageBranding(ctx, settings)
 
   // Customer fields (left half) + Category image (right half)
-  moveDown(ctx, 4)
+  moveDown(ctx, 8)
   const midX = ctx.margin + (rightEdge - ctx.margin) * 0.5
   const fieldLabelW = 70
   const fieldLineEnd = midX - 10
@@ -179,7 +179,7 @@ export async function generateBlankFormPdf(
   for (const field of customerFields) {
     drawText(ctx, `${field}:`, ctx.margin, { size: 8 })
     drawBlankLine(ctx, ctx.margin + fieldLabelW, fieldLineEnd - ctx.margin - fieldLabelW)
-    moveDown(ctx, 14)
+    moveDown(ctx, 18)
   }
   const customerEndY = ctx.y
 
