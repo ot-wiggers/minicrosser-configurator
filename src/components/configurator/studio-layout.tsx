@@ -338,7 +338,7 @@ export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutPro
 
   const groupsWithOptions = useQuery(
     api.optionGroups.listWithOptionsForCategory,
-    selectedCategory ? { categoryId: selectedCategory } : 'skip',
+    selectedCategory ? { categoryId: selectedCategory, baseModelId: selectedBaseModelId ?? undefined } : 'skip',
   )
 
   // Find selected color option for image variant lookup
@@ -404,7 +404,31 @@ export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutPro
           <div className="mb-6">
             <h2 className="text-2xl font-bold">{baseModel.name}</h2>
             {baseModel.description && (
-              <p className="mt-1 text-muted-foreground">{baseModel.description}</p>
+              <div
+                className="mt-1 text-muted-foreground prose prose-sm max-w-none [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-4 [&_ol]:pl-4"
+                dangerouslySetInnerHTML={{ __html: baseModel.description }}
+              />
+            )}
+            {baseModel.specs && baseModel.specs.length > 0 && (
+              <div className="mt-4 rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="px-3 py-1.5 text-left font-medium" colSpan={2}>
+                        Technische Daten
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {baseModel.specs.map((spec: { label: string; value: string }, i: number) => (
+                      <tr key={i} className="border-b last:border-0">
+                        <td className="px-3 py-1.5 font-medium text-muted-foreground">{spec.label}</td>
+                        <td className="px-3 py-1.5">{spec.value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
             <p className="mt-2 text-xl font-bold" style={{ color: ACCENT }}>
               ab {formatCurrency(baseModel.priceNet)}{' '}

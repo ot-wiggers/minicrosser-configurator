@@ -37,7 +37,7 @@ export function ModelPicker() {
                 <img
                   src={model.imageUrl}
                   alt={model.name}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
@@ -48,7 +48,10 @@ export function ModelPicker() {
             <CardContent className="p-4">
               <p className="font-semibold">{model.name}</p>
               {model.description && (
-                <p className="mt-1 text-sm text-muted-foreground">{model.description}</p>
+                <div
+                  className="mt-1 text-sm text-muted-foreground prose prose-sm max-w-none [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-4 [&_ol]:pl-4"
+                  dangerouslySetInnerHTML={{ __html: model.description }}
+                />
               )}
               <p className="mt-2 text-lg font-bold text-primary">
                 ab {formatCurrency(model.priceNet)}{' '}

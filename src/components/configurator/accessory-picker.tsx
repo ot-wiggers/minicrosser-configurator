@@ -167,11 +167,11 @@ function MultiGroup({
 }
 
 export function AccessoryPicker() {
-  const { selectedCategory } = useConfiguratorStore()
+  const { selectedCategory, selectedBaseModelId } = useConfiguratorStore()
 
   const groupsWithOptions = useQuery(
     api.optionGroups.listWithOptionsForCategory,
-    selectedCategory ? { categoryId: selectedCategory } : 'skip',
+    selectedCategory ? { categoryId: selectedCategory, baseModelId: selectedBaseModelId ?? undefined } : 'skip',
   )
 
   if (!selectedCategory || !groupsWithOptions) return null
