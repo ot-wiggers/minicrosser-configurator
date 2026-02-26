@@ -162,6 +162,9 @@ function OptionFormInner({
   const [isActive, setIsActive] = useState(option?.isActive ?? true)
   const [isDefault, setIsDefault] = useState(option?.isDefault ?? false)
   const [imageStorageId, setImageStorageId] = useState<string | undefined>(option?.imageStorageId as string | undefined)
+  const [restrictToModels, setRestrictToModels] = useState<string[]>(option?.restrictToModels ?? [])
+
+  const allModels = useQuery(api.baseModels.list)
 
   // Populate form when option data loads (query is async)
   useEffect(() => {
@@ -177,6 +180,7 @@ function OptionFormInner({
       setIsActive(option.isActive)
       setIsDefault(option.isDefault)
       setImageStorageId(option.imageStorageId as string | undefined)
+      setRestrictToModels(option.restrictToModels ?? [])
     }
   }, [option])
 
@@ -228,6 +232,7 @@ function OptionFormInner({
           sortOrder: parseInt(sortOrder, 10) || 0,
           isActive,
           isDefault,
+          restrictToModels: restrictToModels.length > 0 ? restrictToModels : undefined,
         }
         if (imageStorageId) {
           updateArgs.imageStorageId = imageStorageId
@@ -248,6 +253,7 @@ function OptionFormInner({
           sortOrder: parseInt(sortOrder, 10) || 0,
           isActive,
           isDefault,
+          restrictToModels: restrictToModels.length > 0 ? restrictToModels : undefined,
         }
         if (imageStorageId) {
           createArgs.imageStorageId = imageStorageId
@@ -381,6 +387,33 @@ function OptionFormInner({
         <div className="flex items-center justify-between">
           <Label htmlFor="isDefault">Standard-Option</Label>
           <Switch id="isDefault" checked={isDefault} onCheckedChange={setIsDefault} />
+        </div>
+
+        {/* Restrict to Models */}
+        <div className="space-y-2">
+          <Label>Modell-Einschränkung</Label>
+          <p className="text-xs text-muted-foreground">
+            Keine Auswahl = verfügbar für alle Modelle
+          </p>
+          <div className="max-h-40 space-y-1.5 overflow-y-auto rounded-md border p-2">
+            {allModels?.map((model) => (
+              <label key={model._id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={restrictToModels.includes(model._id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setRestrictToModels((prev) => [...prev, model._id])
+                    } else {
+                      setRestrictToModels((prev) => prev.filter((id) => id !== model._id))
+                    }
+                  }}
+                  className="rounded border-input"
+                />
+                {model.name}
+              </label>
+            ))}
+          </div>
         </div>
 
         {/* Image */}
