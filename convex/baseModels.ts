@@ -89,6 +89,7 @@ export const create = mutation({
     imageStorageId: v.optional(v.id('_storage')),
     sortOrder: v.number(),
     isActive: v.boolean(),
+    specs: v.optional(v.array(v.object({ label: v.string(), value: v.string() }))),
   },
   handler: async (ctx, args) => {
     return ctx.db.insert('baseModels', args)
@@ -108,6 +109,7 @@ export const update = mutation({
     imageStorageId: v.optional(v.id('_storage')),
     sortOrder: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
+    specs: v.optional(v.array(v.object({ label: v.string(), value: v.string() }))),
     removeImage: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {

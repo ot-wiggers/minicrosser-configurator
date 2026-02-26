@@ -36,7 +36,10 @@ export const listForCategory = query({
  * Used by the accessory-picker in the configurator.
  */
 export const listWithOptionsForCategory = query({
-  args: { categoryId: v.string() },
+  args: {
+    categoryId: v.string(),
+    baseModelId: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     const groups = await ctx.db
       .query('optionGroups')
@@ -52,9 +55,17 @@ export const listWithOptionsForCategory = query({
         .query('options')
         .withIndex('by_optionGroupId', (q) => q.eq('optionGroupId', group._id))
         .collect()
-      const activeOptions = options
+      let activeOptions = options
         .filter((o) => o.isActive)
         .sort((a, b) => a.sortOrder - b.sortOrder)
+
+      // Filter by model restriction if a baseModelId is provided
+      if (args.baseModelId) {
+        activeOptions = activeOptions.filter(
+          (o) => !o.restrictToModels || o.restrictToModels.length === 0 || o.restrictToModels.includes(args.baseModelId!),
+        )
+      }
+
       const optionsWithImages = await Promise.all(
         activeOptions.map(async (opt) => ({
           ...opt,
@@ -63,7 +74,9 @@ export const listWithOptionsForCategory = query({
             : null,
         })),
       )
-      result.push({ group, items: optionsWithImages })
+      if (optionsWithImages.length > 0) {
+        result.push({ group, items: optionsWithImages })
+      }
     }
     return result
   },

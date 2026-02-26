@@ -90,6 +90,7 @@ export const create = mutation({
     sortOrder: v.number(),
     isActive: v.boolean(),
     isDefault: v.boolean(),
+    restrictToModels: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     return ctx.db.insert('options', args)
@@ -110,6 +111,7 @@ export const update = mutation({
     sortOrder: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
     isDefault: v.optional(v.boolean()),
+    restrictToModels: v.optional(v.array(v.string())),
     removeImage: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
