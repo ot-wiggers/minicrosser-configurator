@@ -22,6 +22,14 @@ export const metadata: Metadata = {
   title: 'Mini Crosser Konfigurator',
   description: 'Angebots- und Bestellkonfigurator für Mini Crosser Fahrzeuge',
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'MC Konfigurator',
+  },
+  icons: {
+    apple: '/icons/apple-touch-icon.png',
+  },
 }
 
 export const viewport: Viewport = {
