@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { RefreshCw, ArrowRight, Loader2 } from 'lucide-react'
+import { RefreshCw, Upload, Download, Loader2 } from 'lucide-react'
 
 export function MiscSettingsTab() {
   const [syncing, setSyncing] = useState<'to-prod' | 'to-dev' | null>(null)
@@ -56,9 +56,9 @@ export function MiscSettingsTab() {
               {syncing === 'to-prod' ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <ArrowRight className="mr-2 h-4 w-4" />
+                <Upload className="mr-2 h-4 w-4" />
               )}
-              Dev → Prod kopieren
+              Dev nach Prod übertragen
             </Button>
             <Button
               variant="outline"
@@ -68,9 +68,9 @@ export function MiscSettingsTab() {
               {syncing === 'to-dev' ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <ArrowRight className="mr-2 h-4 w-4 rotate-180" />
+                <Download className="mr-2 h-4 w-4" />
               )}
-              Prod → Dev kopieren
+              Prod nach Dev übertragen
             </Button>
           </div>
 
