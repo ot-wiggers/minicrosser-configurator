@@ -7,7 +7,7 @@ import { BlankPdfButtons } from '@/components/dashboard/blank-pdf-buttons'
 import { EmployeeLogin } from '@/components/auth/employee-login'
 import { useConfiguratorStore } from '@/modules/configurator'
 import { useAuthStore } from '@/modules/auth/auth-store'
-import { FilePlus2, ShoppingCart, LogOut } from 'lucide-react'
+import { FilePlus2, ShoppingCart, LogOut, Shield } from 'lucide-react'
 
 export default function DashboardPage() {
   const { setDocumentType, reset } = useConfiguratorStore()
@@ -32,10 +32,20 @@ export default function DashboardPage() {
             Willkommen, {user.name}
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={clearSession}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Abmelden
-        </Button>
+        <div className="flex items-center gap-2">
+          {user.role === 'admin' && (
+            <Link href="/admin">
+              <Button variant="outline" size="sm">
+                <Shield className="mr-2 h-4 w-4" />
+                Admin-Bereich
+              </Button>
+            </Link>
+          )}
+          <Button variant="ghost" size="sm" onClick={clearSession}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Abmelden
+          </Button>
+        </div>
       </div>
 
       <div className="mb-8 grid grid-cols-2 gap-4">
