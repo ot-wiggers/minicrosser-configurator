@@ -56,3 +56,6 @@ public/fallback-*.js
 
 # playwright mcp
 .playwright-mcp/
+
+# claude
+.claude/
