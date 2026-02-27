@@ -6,12 +6,14 @@ import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { OnlineIndicator } from './online-indicator'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, SendHorizonal } from 'lucide-react'
+import { LayoutDashboard, SendHorizonal, Download } from 'lucide-react'
+import { useInstallPrompt } from '@/hooks/use-install-prompt'
 
 export function TopBar() {
   const pathname = usePathname()
   const outbox = useQuery(api.outbox.listPending)
   const pendingCount = outbox?.length ?? 0
+  const { canInstall, promptInstall } = useInstallPrompt()
 
   const navItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard, badge: 0 },
@@ -48,7 +50,18 @@ export function TopBar() {
             ))}
           </nav>
         </div>
-        <OnlineIndicator />
+        <div className="flex items-center gap-2">
+          {canInstall && (
+            <button
+              onClick={promptInstall}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Download className="h-4 w-4" />
+              Installieren
+            </button>
+          )}
+          <OnlineIndicator />
+        </div>
       </div>
     </header>
   )
