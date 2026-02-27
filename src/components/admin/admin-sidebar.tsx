@@ -13,9 +13,8 @@ import {
   Layers,
   Settings,
   ListChecks,
-  Users,
   Contact,
-  ArrowLeftRight,
+  ArrowLeft,
   LogOut,
 } from 'lucide-react'
 
@@ -26,8 +25,6 @@ const navItems = [
   { href: '/admin/option-groups', label: 'Optionsgruppen', icon: Layers },
   { href: '/admin/options', label: 'Optionen', icon: ListChecks },
   { href: '/admin/customers', label: 'Kunden', icon: Contact },
-  { href: '/admin/import-export', label: 'Import/Export', icon: ArrowLeftRight },
-  { href: '/admin/users', label: 'Benutzer', icon: Users },
   { href: '/admin/settings', label: 'Einstellungen', icon: Settings },
 ]
 
@@ -58,6 +55,15 @@ export function AdminSidebar() {
             {user.name}
           </p>
         )}
+      </div>
+      <div className="px-2 mb-2">
+        <Link
+          href="/"
+          className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Konfigurator
+        </Link>
       </div>
       <nav className="flex-1 space-y-1 px-2">
         {navItems.map((item) => {
