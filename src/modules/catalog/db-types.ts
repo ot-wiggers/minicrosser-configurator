@@ -3,6 +3,7 @@ export interface CategoryRecord {
   name: string
   sortOrder: number
   isActive: boolean
+  imageStorageId?: string | null
   imageBlob?: Blob
 }
 
@@ -15,6 +16,8 @@ export interface BaseModelRecord {
   description?: string
   priceNet: number
   priceGross: number
+  specs?: Array<{ label: string; value: string }>
+  imageStorageId?: string | null
   imageBlob?: Blob
   sortOrder: number
   isActive: boolean
@@ -38,6 +41,7 @@ export interface OptionRecord {
   description?: string
   priceNet: number
   priceGross: number
+  imageStorageId?: string | null
   imageBlob?: Blob
   sortOrder: number
   isActive: boolean
