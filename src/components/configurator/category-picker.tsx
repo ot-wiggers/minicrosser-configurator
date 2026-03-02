@@ -1,8 +1,10 @@
 'use client'
 
-import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useConfiguratorStore } from '@/modules/configurator'
+import { useOfflineQuery } from '@/hooks/use-offline-query'
+import { useOfflineImage } from '@/hooks/use-offline-image'
+import { db } from '@/modules/storage/db'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { Bike, Car, Weight, Home, type LucideIcon, Package } from 'lucide-react'
@@ -27,9 +29,24 @@ function getIconForCategory(name: string): LucideIcon {
   return Package
 }
 
+function CategoryImage({ cat, fallbackIcon }: { cat: any; fallbackIcon: React.ReactNode }) {
+  const imgSrc = useOfflineImage(cat.imageUrl, cat._id, 'categories')
+  if (imgSrc) {
+    return <img src={imgSrc} alt={cat.name} className="h-10 w-10 rounded object-cover" />
+  }
+  return <>{fallbackIcon}</>
+}
+
 export function CategoryPicker() {
   const { selectedCategory, setCategory } = useConfiguratorStore()
-  const categories = useQuery(api.categories.listActive)
+  const categories = useOfflineQuery(
+    api.categories.listActive,
+    {},
+    async () => {
+      const all = await db.categories.where('isActive').equals(1).sortBy('sortOrder')
+      return all.map((c) => ({ ...c, _id: c.id, imageUrl: null }))
+    },
+  )
 
   if (!categories) {
     return (
@@ -57,15 +74,7 @@ export function CategoryPicker() {
               onClick={() => setCategory(cat._id)}
             >
               <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
-                {cat.imageUrl ? (
-                  <img
-                    src={cat.imageUrl}
-                    alt={cat.name}
-                    className="h-10 w-10 rounded object-cover"
-                  />
-                ) : (
-                  <Icon className="h-10 w-10 text-primary" />
-                )}
+                <CategoryImage cat={cat} fallbackIcon={<Icon className="h-10 w-10 text-primary" />} />
                 <div>
                   <p className="font-semibold">{cat.name}</p>
                 </div>
