@@ -1,19 +1,22 @@
 'use client'
 
-import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useConfiguratorStore } from '@/modules/configurator'
+import { useOfflineQuery } from '@/hooks/use-offline-query'
+import { useOfflineImage } from '@/hooks/use-offline-image'
+import { db } from '@/modules/storage/db'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { cn, formatCurrency } from '@/lib/utils'
 import { Check, Circle } from 'lucide-react'
 
-function OptionThumbnail({ url }: { url?: string | null }) {
-  if (!url) return null
+function OptionThumbnail({ url, optionId }: { url?: string | null; optionId: string }) {
+  const imgSrc = useOfflineImage(url ?? null, optionId, 'options')
+  if (!imgSrc) return null
   return (
     <img
-      src={url}
+      src={imgSrc}
       alt=""
       className="h-12 w-12 shrink-0 rounded-md border object-cover"
     />
@@ -76,7 +79,7 @@ function SingleGroup({
                 >
                   {isSelected && <Circle className="h-2 w-2 fill-white text-white" />}
                 </div>
-                <OptionThumbnail url={item.imageUrl} />
+                <OptionThumbnail url={item.imageUrl} optionId={item._id} />
                 <div className="flex-1">
                   <p className="font-medium">{item.name}</p>
                   {item.description && (
@@ -139,7 +142,7 @@ function MultiGroup({
                 >
                   {isSelected && <Check className="h-3 w-3 text-white" />}
                 </div>
-                <OptionThumbnail url={item.imageUrl} />
+                <OptionThumbnail url={item.imageUrl} optionId={item._id} />
                 <div className="flex-1">
                   <p className="font-medium">{item.name}</p>
                   {item.description && (
@@ -169,9 +172,30 @@ function MultiGroup({
 export function AccessoryPicker() {
   const { selectedCategory, selectedBaseModelId } = useConfiguratorStore()
 
-  const groupsWithOptions = useQuery(
+  const groupsWithOptions = useOfflineQuery(
     api.optionGroups.listWithOptionsForCategory,
     selectedCategory ? { categoryId: selectedCategory, baseModelId: selectedBaseModelId ?? undefined } : 'skip',
+    async () => {
+      if (!selectedCategory) return []
+      const groups = await db.optionGroups
+        .where('isActive').equals(1)
+        .sortBy('sortOrder')
+      const applicable = groups.filter(
+        (g) => g.appliesTo.length === 0 || g.appliesTo.includes(selectedCategory),
+      )
+      const result = []
+      for (const group of applicable) {
+        const items = await db.options
+          .where('optionGroupId').equals(group.id)
+          .and((o) => o.isActive)
+          .sortBy('sortOrder')
+        result.push({
+          group: { ...group, _id: group.id },
+          items: items.map((o) => ({ ...o, _id: o.id, imageUrl: null })),
+        })
+      }
+      return result
+    },
   )
 
   if (!selectedCategory || !groupsWithOptions) return null
