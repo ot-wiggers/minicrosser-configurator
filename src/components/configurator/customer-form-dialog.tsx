@@ -23,6 +23,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { SignaturePad } from '@/components/configurator/signature-pad'
+import { useOnlineStatus } from '@/hooks/use-online-status'
+import { createDocumentOffline, getNextLocalSequence } from '@/lib/offline-document'
 import { toast } from 'sonner'
 
 interface CustomerFormDialogProps {
@@ -64,6 +66,7 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
     reset,
   } = useConfiguratorStore()
 
+  const isOnline = useOnlineStatus()
   const isEditing = !!editingDocumentId
 
   const baseModel = useQuery(
@@ -202,6 +205,44 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
       }))
       const pricing = calculatePricingFromItems(baseModel, optionItems)
 
+      if (!isOnline) {
+        // ── OFFLINE PATH ──────────────────────────────────
+        const year = new Date().getFullYear()
+        const seqNum = await getNextLocalSequence(`doc-seq-${year}`)
+        const documentNo = `MC-${year}-${String(seqNum).padStart(6, '0')}`
+
+        await createDocumentOffline({
+          documentNo,
+          documentType,
+          customer: {
+            company: customer.company.trim(),
+            firstName: customer.firstName.trim(),
+            lastName: customer.lastName.trim(),
+            street: customer.street.trim(),
+            zip: customer.zip.trim(),
+            city: customer.city.trim(),
+            email: customer.email.trim(),
+            phone: customer.phone?.trim(),
+            contactPerson: customer.contactPerson?.trim(),
+            customerNumber: customer.customerNumber?.trim(),
+          },
+          pricing,
+          selectedCategory,
+          selectedBaseModelId,
+          selectedOptions: Object.values(selectedOptions),
+          notes: notes.trim() || undefined,
+        })
+
+        reset()
+        onOpenChange(false)
+        toast.success(
+          `${documentType === 'QUOTE' ? 'Angebot' : 'Bestellung'} ${documentNo} lokal gespeichert (wird bei Verbindung synchronisiert)`,
+        )
+        router.push(`/`)
+        return
+      }
+
+      // ── ONLINE PATH (existing code below) ─────────────
       const year = new Date().getFullYear()
       const seqNum = await getNextSequence({ key: `doc-seq-${year}` })
       const documentNo = `MC-${year}-${String(seqNum).padStart(6, '0')}`
