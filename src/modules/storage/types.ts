@@ -43,6 +43,7 @@ export interface PricingSummary {
 
 export interface DocumentRecord {
   id?: number
+  convexId?: string          // Set after sync to Convex
   document_no: string
   document_type: DocumentType
   status: DocumentStatus
@@ -64,6 +65,18 @@ export interface OutboxRecord {
   html_body: string
   pdf_base64: string
   filename: string
+  status: OutboxStatus
+  attempts: number
+  last_error?: string
+  created_at: string
+}
+
+/** Local-only outbox for syncing offline-created documents to Convex */
+export interface SyncOutboxRecord {
+  id?: number
+  type: 'DOC_CREATE'
+  localDocId: number         // ID in local documents table
+  payload: string            // JSON-serialized document data
   status: OutboxStatus
   attempts: number
   last_error?: string
