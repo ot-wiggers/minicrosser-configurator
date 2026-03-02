@@ -43,7 +43,7 @@ export function CategoryPicker() {
     api.categories.listActive,
     {},
     async () => {
-      const all = await db.categories.where('isActive').equals(1).sortBy('sortOrder')
+      const all = await db.categories.filter((c) => c.isActive).sortBy('sortOrder')
       return all.map((c) => ({ ...c, _id: c.id, imageUrl: null }))
     },
   )

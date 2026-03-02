@@ -178,7 +178,7 @@ export function AccessoryPicker() {
     async () => {
       if (!selectedCategory) return []
       const groups = await db.optionGroups
-        .where('isActive').equals(1)
+        .filter((g) => g.isActive)
         .sortBy('sortOrder')
       const applicable = groups.filter(
         (g) => g.appliesTo.length === 0 || g.appliesTo.includes(selectedCategory),
