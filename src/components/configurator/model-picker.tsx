@@ -1,19 +1,41 @@
 'use client'
 
-import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { useConfiguratorStore } from '@/modules/configurator'
+import { useOfflineQuery } from '@/hooks/use-offline-query'
+import { useOfflineImage } from '@/hooks/use-offline-image'
+import { db } from '@/modules/storage/db'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn, formatCurrency } from '@/lib/utils'
 import { Car } from 'lucide-react'
 
+function ModelImage({ model }: { model: any }) {
+  const imgSrc = useOfflineImage(model.imageUrl, model._id, 'baseModels')
+  if (imgSrc) {
+    return <img src={imgSrc} alt={model.name} className="h-full w-full object-contain" />
+  }
+  return (
+    <div className="flex h-full w-full items-center justify-center">
+      <Car className="h-12 w-12 text-muted-foreground/40" />
+    </div>
+  )
+}
+
 export function ModelPicker() {
   const { selectedCategory, selectedBaseModelId, setBaseModel } = useConfiguratorStore()
 
-  const models = useQuery(
+  const models = useOfflineQuery(
     api.baseModels.listActiveByCategory,
     selectedCategory ? { categoryId: selectedCategory as Id<"categories"> } : 'skip',
+    async () => {
+      if (!selectedCategory) return []
+      const all = await db.baseModels
+        .where('categoryId').equals(selectedCategory)
+        .and((m) => m.isActive)
+        .sortBy('sortOrder')
+      return all.map((m) => ({ ...m, _id: m.id, imageUrl: null }))
+    },
   )
 
   if (!selectedCategory || !models) return null
@@ -33,17 +55,7 @@ export function ModelPicker() {
             onClick={() => setBaseModel(model._id)}
           >
             <div className="aspect-video bg-muted">
-              {model.imageUrl ? (
-                <img
-                  src={model.imageUrl}
-                  alt={model.name}
-                  className="h-full w-full object-contain"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Car className="h-12 w-12 text-muted-foreground/40" />
-                </div>
-              )}
+              <ModelImage model={model} />
             </div>
             <CardContent className="p-4">
               <p className="font-semibold">{model.name}</p>
