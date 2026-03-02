@@ -1,9 +1,10 @@
 'use client'
 
-import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { useConfiguratorStore } from '@/modules/configurator'
+import { useOfflineQuery } from '@/hooks/use-offline-query'
+import { db } from '@/modules/storage/db'
 import { calculatePricingFromItems } from '@/modules/pricing'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -19,9 +20,15 @@ interface CartSidebarProps {
 export function CartSidebar({ onCreateDocument }: CartSidebarProps) {
   const { documentType, selectedBaseModelId, selectedOptions } = useConfiguratorStore()
 
-  const baseModel = useQuery(
+  const baseModel = useOfflineQuery(
     api.baseModels.getById,
     selectedBaseModelId ? { id: selectedBaseModelId as Id<"baseModels"> } : 'skip',
+    async () => {
+      if (!selectedBaseModelId) return null
+      const m = await db.baseModels.get(selectedBaseModelId)
+      if (!m) return null
+      return { ...m, _id: m.id, imageUrl: null }
+    },
   )
 
   // Calculate pricing from store data (selectedOptions already contains pricing info)
