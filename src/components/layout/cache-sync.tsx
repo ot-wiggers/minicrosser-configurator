@@ -7,10 +7,8 @@ import { db } from '@/modules/storage/db'
 
 /**
  * CacheSync — subscribes to key Convex queries and writes data to
- * Dexie/IndexedDB for offline read access. This keeps the local cache
- * up to date whenever the user is online and Convex data changes.
- *
- * Cached tables: categories, baseModels, optionGroups, options, settings.
+ * Dexie/IndexedDB for offline read access. Also fetches and caches
+ * image blobs for offline display.
  */
 export function CacheSync() {
   const categories = useQuery(api.categories.list)
@@ -24,57 +22,91 @@ export function CacheSync() {
   // Sync categories
   useEffect(() => {
     if (!categories) return
-    const hash = JSON.stringify(categories.map((c) => c._id))
+    const hash = JSON.stringify(categories.map((c: any) => `${c._id}-${c.imageStorageId}`))
     if (lastSyncRef.current.categories === hash) return
     lastSyncRef.current.categories = hash
-
     syncCategories(categories).catch(console.error)
   }, [categories])
 
   // Sync baseModels
   useEffect(() => {
     if (!baseModels) return
-    const hash = JSON.stringify(baseModels.map((m) => m._id))
+    const hash = JSON.stringify(baseModels.map((m: any) => `${m._id}-${m.imageStorageId}`))
     if (lastSyncRef.current.baseModels === hash) return
     lastSyncRef.current.baseModels = hash
-
     syncBaseModels(baseModels).catch(console.error)
   }, [baseModels])
 
   // Sync optionGroups
   useEffect(() => {
     if (!optionGroups) return
-    const hash = JSON.stringify(optionGroups.map((g) => g._id))
+    const hash = JSON.stringify(optionGroups.map((g: any) => g._id))
     if (lastSyncRef.current.optionGroups === hash) return
     lastSyncRef.current.optionGroups = hash
-
     syncOptionGroups(optionGroups).catch(console.error)
   }, [optionGroups])
 
   // Sync options
   useEffect(() => {
     if (!options) return
-    const hash = JSON.stringify(options.map((o) => o._id))
+    const hash = JSON.stringify(options.map((o: any) => `${o._id}-${o.imageStorageId}`))
     if (lastSyncRef.current.options === hash) return
     lastSyncRef.current.options = hash
-
     syncOptions(options).catch(console.error)
   }, [options])
 
   // Sync settings
   useEffect(() => {
     if (!settings) return
-    const hash = JSON.stringify(settings.map((s) => s.key))
+    const hash = JSON.stringify(settings.map((s: any) => s.key))
     if (lastSyncRef.current.settings === hash) return
     lastSyncRef.current.settings = hash
-
     syncSettings(settings).catch(console.error)
   }, [settings])
 
   return null
 }
 
-// ---- Per-table sync functions (typed individually to avoid union issues) ----
+// ── Image blob helper ───────────────────────────────────────────
+
+async function fetchImageBlob(imageUrl: string): Promise<Blob | null> {
+  try {
+    const response = await fetch(imageUrl)
+    if (!response.ok) return null
+    return await response.blob()
+  } catch {
+    return null
+  }
+}
+
+/**
+ * After syncing data rows, check which items need image blob updates.
+ * Only fetches images where imageStorageId differs from what's cached.
+ */
+async function syncImageBlobs(
+  table: 'categories' | 'baseModels' | 'options',
+  items: Array<{ id: string; imageStorageId?: string | null; imageUrl?: string | null }>,
+) {
+  for (const item of items) {
+    if (!item.imageUrl || !item.imageStorageId) continue
+
+    try {
+      const existing = await (db[table] as any).get(item.id)
+      // Skip if blob already cached for this imageStorageId
+      if (existing?.imageStorageId === item.imageStorageId && existing?.imageBlob) {
+        continue
+      }
+      const blob = await fetchImageBlob(item.imageUrl)
+      if (blob) {
+        await (db[table] as any).update(item.id, { imageBlob: blob })
+      }
+    } catch (err) {
+      console.warn(`CacheSync: failed to cache image for ${table}/${item.id}`, err)
+    }
+  }
+}
+
+// ── Per-table sync functions ────────────────────────────────────
 
 async function syncCategories(items: any[]) {
   try {
@@ -86,9 +118,22 @@ async function syncCategories(items: any[]) {
       imageStorageId: item.imageStorageId ?? null,
     }))
     await db.transaction('rw', db.categories, async () => {
+      // Preserve existing imageBlob during sync
+      const existing = await db.categories.toArray()
+      const blobMap = new Map(existing.map((e) => [e.id, e.imageBlob]))
+      const withBlobs = mapped.map((m) => ({
+        ...m,
+        imageBlob: blobMap.get(m.id),
+      }))
       await db.categories.clear()
-      await db.categories.bulkPut(mapped)
+      await db.categories.bulkPut(withBlobs)
     })
+    // Fetch image blobs in background (non-blocking)
+    syncImageBlobs('categories', items.map((i: any) => ({
+      id: i._id,
+      imageStorageId: i.imageStorageId,
+      imageUrl: i.imageUrl,
+    }))).catch(console.error)
   } catch (err) {
     console.error('CacheSync: failed to sync categories', err)
   }
@@ -102,16 +147,29 @@ async function syncBaseModels(items: any[]) {
       skuCode: item.skuCode,
       articleNo: item.articleNo,
       name: item.name,
+      description: item.description ?? undefined,
       priceNet: item.priceNet,
       priceGross: item.priceGross,
+      specs: item.specs ?? undefined,
       sortOrder: item.sortOrder ?? 0,
       isActive: item.isActive ?? true,
       imageStorageId: item.imageStorageId ?? null,
     }))
     await db.transaction('rw', db.baseModels, async () => {
+      const existing = await db.baseModels.toArray()
+      const blobMap = new Map(existing.map((e) => [e.id, e.imageBlob]))
+      const withBlobs = mapped.map((m) => ({
+        ...m,
+        imageBlob: blobMap.get(m.id),
+      }))
       await db.baseModels.clear()
-      await db.baseModels.bulkPut(mapped)
+      await db.baseModels.bulkPut(withBlobs)
     })
+    syncImageBlobs('baseModels', items.map((i: any) => ({
+      id: i._id,
+      imageStorageId: i.imageStorageId,
+      imageUrl: i.imageUrl,
+    }))).catch(console.error)
   } catch (err) {
     console.error('CacheSync: failed to sync baseModels', err)
   }
@@ -144,6 +202,7 @@ async function syncOptions(items: any[]) {
       skuCode: item.skuCode,
       articleNo: item.articleNo,
       name: item.name,
+      description: item.description ?? undefined,
       priceNet: item.priceNet,
       priceGross: item.priceGross,
       isDefault: item.isDefault ?? false,
@@ -152,9 +211,20 @@ async function syncOptions(items: any[]) {
       imageStorageId: item.imageStorageId ?? null,
     }))
     await db.transaction('rw', db.options, async () => {
+      const existing = await db.options.toArray()
+      const blobMap = new Map(existing.map((e) => [e.id, e.imageBlob]))
+      const withBlobs = mapped.map((m) => ({
+        ...m,
+        imageBlob: blobMap.get(m.id),
+      }))
       await db.options.clear()
-      await db.options.bulkPut(mapped)
+      await db.options.bulkPut(withBlobs)
     })
+    syncImageBlobs('options', items.map((i: any) => ({
+      id: i._id,
+      imageStorageId: i.imageStorageId,
+      imageUrl: i.imageUrl,
+    }))).catch(console.error)
   } catch (err) {
     console.error('CacheSync: failed to sync options', err)
   }
