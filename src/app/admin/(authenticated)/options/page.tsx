@@ -4,13 +4,14 @@ import { useState, useMemo } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../../../convex/_generated/api'
 import { OptionForm } from '@/components/admin/option-form'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { ImageLightbox } from '@/components/ui/image-lightbox'
-import { Plus, Pencil, Trash2, ListChecks } from 'lucide-react'
+import { Plus, Pencil, Trash2, ListChecks, ArrowUp, ArrowDown, Search } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 const ALL_GROUPS = '__all__'
@@ -18,11 +19,16 @@ const ALL_GROUPS = '__all__'
 export default function OptionsPage() {
   const options = useQuery(api.options.list)
   const optionGroups = useQuery(api.optionGroups.list)
+  const categories = useQuery(api.categories.list)
   const removeOption = useMutation(api.options.remove)
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingOptionId, setEditingOptionId] = useState<string | undefined>(undefined)
   const [filterGroupId, setFilterGroupId] = useState(ALL_GROUPS)
+  const [filterCategoryId, setFilterCategoryId] = useState('__all__')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortField, setSortField] = useState<string>('name')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Build a lookup map for group names
   const groupMap = useMemo(() => {
@@ -36,10 +42,68 @@ export default function OptionsPage() {
   }, [optionGroups])
 
   const filteredOptions = useMemo(() => {
-    if (!options) return []
-    if (filterGroupId === ALL_GROUPS) return options
-    return options.filter((o) => o.optionGroupId === filterGroupId)
-  }, [options, filterGroupId])
+    if (!options || !optionGroups) return []
+    let result = [...options]
+
+    // Group filter
+    if (filterGroupId !== ALL_GROUPS) {
+      result = result.filter((o) => o.optionGroupId === filterGroupId)
+    }
+
+    // Category filter
+    if (filterCategoryId !== '__all__') {
+      const applicableGroupIds = new Set(
+        optionGroups
+          .filter((g) => g.appliesTo.length === 0 || g.appliesTo.includes(filterCategoryId))
+          .map((g) => g._id),
+      )
+      result = result.filter((o) => applicableGroupIds.has(o.optionGroupId))
+    }
+
+    // Text search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(
+        (o) =>
+          o.name.toLowerCase().includes(q) ||
+          o.skuCode.toLowerCase().includes(q) ||
+          o.articleNo.toLowerCase().includes(q),
+      )
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let aVal: string | number, bVal: string | number
+      switch (sortField) {
+        case 'name': aVal = a.name; bVal = b.name; break
+        case 'skuCode': aVal = a.skuCode; bVal = b.skuCode; break
+        case 'articleNo': aVal = a.articleNo; bVal = b.articleNo; break
+        case 'priceNet': aVal = a.priceNet; bVal = b.priceNet; break
+        case 'group': aVal = groupMap.get(a.optionGroupId) ?? ''; bVal = groupMap.get(b.optionGroupId) ?? ''; break
+        default: aVal = a.name; bVal = b.name
+      }
+      if (typeof aVal === 'string') {
+        return sortDir === 'asc' ? aVal.localeCompare(bVal as string) : (bVal as string).localeCompare(aVal)
+      }
+      return sortDir === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number)
+    })
+
+    return result
+  }, [options, optionGroups, filterGroupId, filterCategoryId, searchQuery, sortField, sortDir, groupMap])
+
+  function toggleSort(field: string) {
+    if (sortField === field) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortField(field)
+      setSortDir('asc')
+    }
+  }
+
+  function SortIcon({ field }: { field: string }) {
+    if (sortField !== field) return null
+    return sortDir === 'asc' ? <ArrowUp className="ml-1 inline h-3 w-3" /> : <ArrowDown className="ml-1 inline h-3 w-3" />
+  }
 
   function handleNew() {
     setEditingOptionId(undefined)
@@ -74,10 +138,19 @@ export default function OptionsPage() {
         </Button>
       </div>
 
-      {/* Filter by group */}
-      <div className="mb-4 max-w-xs">
+      {/* Filters */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Suche nach Name, SKU, Artikelnr..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Select value={filterGroupId} onValueChange={setFilterGroupId}>
-          <SelectTrigger>
+          <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Alle Gruppen" />
           </SelectTrigger>
           <SelectContent>
@@ -85,6 +158,19 @@ export default function OptionsPage() {
             {optionGroups && optionGroups.map((g) => (
               <SelectItem key={g._id} value={g._id}>
                 {g.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterCategoryId} onValueChange={setFilterCategoryId}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Alle Kategorien" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Alle Kategorien</SelectItem>
+            {categories && categories.map((cat) => (
+              <SelectItem key={cat._id} value={cat._id}>
+                {cat.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -97,10 +183,18 @@ export default function OptionsPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">Bild</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Gruppe</TableHead>
-              <TableHead>Artikelnr.</TableHead>
-              <TableHead className="text-right">Preis Netto</TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('name')}>
+                Name<SortIcon field="name" />
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('group')}>
+                Gruppe<SortIcon field="group" />
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('articleNo')}>
+                Artikelnr.<SortIcon field="articleNo" />
+              </TableHead>
+              <TableHead className="cursor-pointer select-none text-right" onClick={() => toggleSort('priceNet')}>
+                Preis Netto<SortIcon field="priceNet" />
+              </TableHead>
               <TableHead className="w-16 text-center">Standard</TableHead>
               <TableHead className="w-20 text-center">Status</TableHead>
               <TableHead className="w-24 text-right">Aktionen</TableHead>
@@ -134,7 +228,9 @@ export default function OptionsPage() {
                     {groupMap.get(opt.optionGroupId) ?? '-'}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{opt.articleNo}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(opt.priceNet)}</TableCell>
+                  <TableCell className="text-right">
+                    {opt.priceOnRequest ? <span className="text-muted-foreground">a.A.</span> : formatCurrency(opt.priceNet)}
+                  </TableCell>
                   <TableCell className="text-center">
                     {opt.isDefault && (
                       <span className="text-primary" title="Standard-Option">
