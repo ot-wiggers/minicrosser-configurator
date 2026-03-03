@@ -54,6 +54,8 @@ function ModelFormInner({
         sortOrder: model.sortOrder,
         isActive: model.isActive,
         priceOnRequest: model.priceOnRequest ?? false,
+        isDefault: model.isDefault ?? false,
+        upgradeLabel: model.upgradeLabel ?? '',
         imageStorageId: model.imageStorageId as string | undefined,
         specs: (model.specs ?? []) as Array<{ label: string; value: string }>,
       }
@@ -69,6 +71,8 @@ function ModelFormInner({
       sortOrder: 0,
       isActive: true,
       priceOnRequest: false,
+      isDefault: false,
+      upgradeLabel: '',
       imageStorageId: undefined as string | undefined,
       specs: [] as Array<{ label: string; value: string }>,
     }
@@ -93,6 +97,8 @@ function ModelFormInner({
         sortOrder: model.sortOrder,
         isActive: model.isActive,
         priceOnRequest: model.priceOnRequest ?? false,
+        isDefault: model.isDefault ?? false,
+        upgradeLabel: model.upgradeLabel ?? '',
         imageStorageId: model.imageStorageId as string | undefined,
         specs: (model.specs ?? []) as Array<{ label: string; value: string }>,
       })
@@ -151,6 +157,8 @@ function ModelFormInner({
           sortOrder: form.sortOrder,
           isActive: form.isActive,
           priceOnRequest: form.priceOnRequest || undefined,
+          isDefault: form.isDefault || undefined,
+          upgradeLabel: form.upgradeLabel.trim() || undefined,
           specs: form.specs.filter((s) => s.label.trim() && s.value.trim()),
         }
         if (form.imageStorageId) {
@@ -172,6 +180,8 @@ function ModelFormInner({
           sortOrder: form.sortOrder,
           isActive: form.isActive,
           priceOnRequest: form.priceOnRequest || undefined,
+          isDefault: form.isDefault || undefined,
+          upgradeLabel: form.upgradeLabel.trim() || undefined,
           specs: form.specs.filter((s) => s.label.trim() && s.value.trim()),
         }
         if (form.imageStorageId) {
@@ -327,6 +337,28 @@ function ModelFormInner({
               onCheckedChange={(checked) => updateField('isActive', checked)}
             />
             <Label htmlFor="isActive">Aktiv</Label>
+          </div>
+
+          {/* Is Default (auto-selected in configurator) */}
+          <div className="flex items-center gap-3">
+            <Switch
+              id="isDefault"
+              checked={form.isDefault}
+              onCheckedChange={(checked) => updateField('isDefault', checked)}
+            />
+            <Label htmlFor="isDefault">Standard-Modell (Comfort)</Label>
+          </div>
+
+          {/* Upgrade Label */}
+          <div className="space-y-2">
+            <Label htmlFor="upgradeLabel">Upgrade-Bezeichnung</Label>
+            <Input
+              id="upgradeLabel"
+              value={form.upgradeLabel}
+              onChange={(e) => updateField('upgradeLabel', e.target.value)}
+              placeholder="z.B. Premium-Ausstattung"
+            />
+            <p className="text-xs text-muted-foreground">Alternativer Name im Upgrade-Picker (optional)</p>
           </div>
 
           {/* Image */}

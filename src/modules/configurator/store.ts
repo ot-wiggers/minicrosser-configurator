@@ -14,6 +14,7 @@ interface ConfiguratorState {
   // Actions
   setDocumentType: (type: DocumentType) => void
   setCategory: (categoryId: string) => void
+  setCategoryWithDefaultModel: (categoryId: string, defaultModelId: string | null) => void
   setBaseModel: (id: string) => void
   toggleOption: (option: SelectedOption) => void
   setOptionQuantity: (optionItemId: string, quantity: number) => void
@@ -49,6 +50,14 @@ export const useConfiguratorStore = create<ConfiguratorState>((set) => ({
       selectedBaseModelId: null,
       selectedOptions: {},
       currentStep: 1,
+    }),
+
+  setCategoryWithDefaultModel: (categoryId, defaultModelId) =>
+    set({
+      selectedCategory: categoryId,
+      selectedBaseModelId: defaultModelId,
+      selectedOptions: {},
+      currentStep: defaultModelId ? 2 : 1,
     }),
 
   setBaseModel: (id) => set({ selectedBaseModelId: id, currentStep: 2 }),

@@ -38,7 +38,17 @@ function CategoryImage({ cat, fallbackIcon }: { cat: any; fallbackIcon: React.Re
 }
 
 export function CategoryPicker() {
-  const { selectedCategory, setCategory } = useConfiguratorStore()
+  const { selectedCategory, setCategoryWithDefaultModel } = useConfiguratorStore()
+
+  const allModels = useOfflineQuery(
+    api.baseModels.list,
+    {},
+    async () => {
+      const all = await db.baseModels.toArray()
+      return all.map((m) => ({ ...m, _id: m.id, imageUrl: null }))
+    },
+  )
+
   const categories = useOfflineQuery(
     api.categories.listActive,
     {},
@@ -71,7 +81,12 @@ export function CategoryPicker() {
                 'cursor-pointer transition-all hover:border-primary/50 hover:shadow-md',
                 selectedCategory === cat._id && 'border-primary ring-2 ring-primary/20',
               )}
-              onClick={() => setCategory(cat._id)}
+              onClick={() => {
+                const defaultModel = allModels?.find(
+                  (m) => m.categoryId === cat._id && m.isDefault && m.isActive,
+                )
+                setCategoryWithDefaultModel(cat._id, defaultModel?._id ?? null)
+              }}
             >
               <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
                 <CategoryImage cat={cat} fallbackIcon={<Icon className="h-10 w-10 text-primary" />} />

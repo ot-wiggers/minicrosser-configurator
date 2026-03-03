@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { cn, formatCurrency } from '@/lib/utils'
 import { Check, Circle } from 'lucide-react'
+import { UpgradePicker } from './upgrade-picker'
 
 function OptionThumbnail({ url, optionId }: { url?: string | null; optionId: string }) {
   const imgSrc = useOfflineImage(url ?? null, optionId, 'options')
@@ -217,9 +218,10 @@ export function AccessoryPicker() {
       <h2 className="mb-2 text-xl font-semibold">Zubehör & Optionen</h2>
       <p className="mb-6 text-muted-foreground">Passen Sie Ihr Fahrzeug individuell an</p>
       <div className="space-y-6">
+        <UpgradePicker />
         {groupsWithOptions.map(({ group, items }, idx: number) => (
           <div key={group._id}>
-            {idx > 0 && <Separator className="mb-6" />}
+            <Separator className="mb-6" />
             {group.selectionType === 'SINGLE' ? (
               <SingleGroup group={group} items={items} />
             ) : (
