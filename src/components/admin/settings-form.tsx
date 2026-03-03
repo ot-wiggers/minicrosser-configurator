@@ -17,6 +17,7 @@ import {
 import { PdfPreview } from '@/components/admin/pdf-preview'
 import { ImageUpload } from '@/components/admin/image-upload'
 import { toast } from 'sonner'
+import { Switch } from '@/components/ui/switch'
 import { Save, ChevronDown } from 'lucide-react'
 
 const SETTING_KEYS = [
@@ -58,6 +59,10 @@ const SETTING_KEYS = [
   'pdfHeaderLine3',
   'pdfSlogan',
   'pdfLogoMaxHeight',
+  // Pipeline settings
+  'pipelineFollowUpDays',
+  'pipelineExpiryDays',
+  'pipelineReminderEnabled',
 ] as const
 
 type SettingKey = (typeof SETTING_KEYS)[number]
@@ -108,12 +113,16 @@ export function SettingsForm() {
         if (key === 'vatRate') {
           const pct = parseFloat(raw)
           entries.push({ key, value: isNaN(pct) ? 0 : pct / 100 })
+        } else if (key === 'pipelineReminderEnabled') {
+          entries.push({ key, value: raw === 'true' ? 'true' : 'false' })
         } else if (
           key.startsWith('pdfFontSize') ||
           key.startsWith('pdfHeader') && key === 'pdfHeaderHeight' ||
           key === 'pdfAccentStripeWidth' ||
           key.startsWith('pdfMargin') ||
-          key === 'pdfLogoMaxHeight'
+          key === 'pdfLogoMaxHeight' ||
+          key === 'pipelineFollowUpDays' ||
+          key === 'pipelineExpiryDays'
         ) {
           // Store numeric PDF settings as numbers
           const n = parseFloat(raw)
@@ -547,6 +556,60 @@ export function SettingsForm() {
               onChange={(e) => update('companyVatId', e.target.value)}
               placeholder="z.B. DE123456789"
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ---- Pipeline ---- */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Pipeline-Einstellungen</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Automatische Nachfass- und Ablauf-Einstellungen fuer versendete Dokumente.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="pipelineFollowUpDays">Nachfassen nach (Tage)</Label>
+              <Input
+                id="pipelineFollowUpDays"
+                type="number"
+                min={1}
+                max={90}
+                value={values.pipelineFollowUpDays ?? '7'}
+                onChange={(e) => update('pipelineFollowUpDays', e.target.value)}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Nach wie vielen Tagen soll ein versendetes Dokument nachgefasst werden?
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="pipelineExpiryDays">Ablauf nach (Tage)</Label>
+              <Input
+                id="pipelineExpiryDays"
+                type="number"
+                min={1}
+                max={365}
+                value={values.pipelineExpiryDays ?? '30'}
+                onChange={(e) => update('pipelineExpiryDays', e.target.value)}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Nach wie vielen Tagen laeuft ein Dokument ab?
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch
+              id="pipelineReminderEnabled"
+              checked={values.pipelineReminderEnabled !== 'false'}
+              onCheckedChange={(checked) =>
+                update('pipelineReminderEnabled', String(checked))
+              }
+            />
+            <Label htmlFor="pipelineReminderEnabled">
+              Erinnerungs-E-Mail automatisch senden
+            </Label>
           </div>
         </CardContent>
       </Card>

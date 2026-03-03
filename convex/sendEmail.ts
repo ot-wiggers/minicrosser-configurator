@@ -57,10 +57,24 @@ export const send = action({
         throw new Error(`Resend API error: ${response.status} - ${errorText}`)
       }
 
+      const responseData = await response.json()
+      const resendMessageId = responseData.id as string | undefined
+
       await ctx.runMutation(api.outbox.updateStatus, {
         id: args.outboxId,
         status: 'SENT',
+        resendMessageId,
       })
+
+      // Transition document from FINAL → SENT with sentAt timestamp
+      const doc = await ctx.runQuery(api.documents.getById, { id: record.documentId })
+      if (doc && doc.status === 'FINAL') {
+        await ctx.runMutation(api.documents.updateStatus, {
+          id: record.documentId,
+          status: 'SENT',
+          sentAt: Date.now(),
+        })
+      }
 
       return { success: true }
     } catch (error) {
