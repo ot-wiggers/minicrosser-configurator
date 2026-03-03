@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { ArrowLeft, Download, FileText, Mail, CheckCircle, Pencil } from 'lucide-react'
 import { SendEmailDialog } from '@/components/documents/send-email-dialog'
 import { PipelineActions } from '@/components/documents/pipeline-actions'
+import { EmailTimeline } from '@/components/documents/email-timeline'
 import type { BlankPdfCatalogData } from '@/modules/pdf/blank-generator'
 
 function downloadPdf(bytes: Uint8Array, filename: string) {
@@ -238,6 +239,7 @@ export default function DocumentPage() {
 
       <div className="space-y-6">
         <DocumentPreview document={doc as any} />
+        <EmailTimeline documentId={documentId} />
         <VersionHistory documentId={documentId} />
       </div>
 
