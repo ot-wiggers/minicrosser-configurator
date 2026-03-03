@@ -21,6 +21,9 @@ export interface BaseModelRecord {
   imageBlob?: Blob
   sortOrder: number
   isActive: boolean
+  priceOnRequest?: boolean
+  isDefault?: boolean
+  upgradeLabel?: string
 }
 
 export interface OptionGroupRecord {
@@ -46,6 +49,7 @@ export interface OptionRecord {
   sortOrder: number
   isActive: boolean
   isDefault: boolean
+  priceOnRequest?: boolean
 }
 
 export interface UserRecord {

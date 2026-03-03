@@ -1,5 +1,5 @@
 export type DocumentType = 'QUOTE' | 'ORDER'
-export type DocumentStatus = 'DRAFT' | 'FINAL' | 'SENT'
+export type DocumentStatus = 'DRAFT' | 'FINAL' | 'SENT' | 'FOLLOW_UP' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | 'ARCHIVED'
 export type OutboxStatus = 'PENDING' | 'SENT' | 'FAILED'
 
 export interface SelectedOption {
@@ -9,6 +9,7 @@ export interface SelectedOption {
   name: string
   priceNet: number
   quantity: number
+  priceOnRequest?: boolean
 }
 
 export interface CustomerData {
@@ -31,6 +32,7 @@ export interface LineItem {
   quantity: number
   unitPriceNet: number
   totalNet: number
+  priceOnRequest?: boolean
 }
 
 export interface PricingSummary {
@@ -39,6 +41,7 @@ export interface PricingSummary {
   vatRate: number
   vatAmount: number
   totalGross: number
+  hasOnRequestItems?: boolean
 }
 
 export interface DocumentRecord {

@@ -23,6 +23,9 @@ export default defineSchema({
     imageStorageId: v.optional(v.id('_storage')),
     sortOrder: v.number(),
     isActive: v.boolean(),
+    priceOnRequest: v.optional(v.boolean()),
+    isDefault: v.optional(v.boolean()),
+    upgradeLabel: v.optional(v.string()),
     specs: v.optional(v.array(v.object({ label: v.string(), value: v.string() }))),
   })
     .index('by_categoryId', ['categoryId', 'sortOrder'])
@@ -51,6 +54,7 @@ export default defineSchema({
     sortOrder: v.number(),
     isActive: v.boolean(),
     isDefault: v.boolean(),
+    priceOnRequest: v.optional(v.boolean()),
     restrictToModels: v.optional(v.array(v.string())),
   })
     .index('by_optionGroupId', ['optionGroupId', 'sortOrder'])
@@ -71,7 +75,16 @@ export default defineSchema({
   documents: defineTable({
     documentNo: v.string(),
     documentType: v.union(v.literal('QUOTE'), v.literal('ORDER')),
-    status: v.union(v.literal('DRAFT'), v.literal('FINAL'), v.literal('SENT')),
+    status: v.union(
+      v.literal('DRAFT'),
+      v.literal('FINAL'),
+      v.literal('SENT'),
+      v.literal('FOLLOW_UP'),
+      v.literal('ACCEPTED'),
+      v.literal('DECLINED'),
+      v.literal('EXPIRED'),
+      v.literal('ARCHIVED'),
+    ),
     customerId: v.optional(v.id('customers')),
     customer: v.object({
       company: v.string(),
@@ -94,12 +107,14 @@ export default defineSchema({
           quantity: v.number(),
           unitPriceNet: v.number(),
           totalNet: v.number(),
+          priceOnRequest: v.optional(v.boolean()),
         }),
       ),
       totalNet: v.number(),
       vatRate: v.number(),
       vatAmount: v.number(),
       totalGross: v.number(),
+      hasOnRequestItems: v.optional(v.boolean()),
     }),
     selectedCategory: v.string(), // VariantCategory or dynamic category name
     selectedBaseModelId: v.string(),
@@ -111,11 +126,16 @@ export default defineSchema({
         name: v.string(),
         priceNet: v.number(),
         quantity: v.number(),
+        priceOnRequest: v.optional(v.boolean()),
       }),
     ),
     notes: v.optional(v.string()),
     signatureStorageId: v.optional(v.id('_storage')),
     createdBy: v.optional(v.id('users')),
+    sentAt: v.optional(v.number()),
+    followUpAt: v.optional(v.number()),
+    archivedAt: v.optional(v.number()),
+    pipelineNote: v.optional(v.string()),
   })
     .index('by_documentNo', ['documentNo'])
     .index('by_status', ['status'])
@@ -191,5 +211,26 @@ export default defineSchema({
     status: v.union(v.literal('PENDING'), v.literal('SENT'), v.literal('FAILED')),
     attempts: v.number(),
     lastError: v.optional(v.string()),
-  }).index('by_status', ['status']),
+    resendMessageId: v.optional(v.string()),
+  })
+    .index('by_status', ['status'])
+    .index('by_documentId', ['documentId'])
+    .index('by_resendMessageId', ['resendMessageId']),
+
+  // ── Email Events (Tracking) ────────────────────────────
+  emailEvents: defineTable({
+    outboxId: v.id('outbox'),
+    documentId: v.id('documents'),
+    resendMessageId: v.string(),
+    eventType: v.union(
+      v.literal('delivered'),
+      v.literal('opened'),
+      v.literal('clicked'),
+      v.literal('bounced'),
+    ),
+    timestamp: v.number(),
+    metadata: v.optional(v.string()),
+  })
+    .index('by_documentId', ['documentId', 'timestamp'])
+    .index('by_resendMessageId', ['resendMessageId']),
 })
