@@ -18,6 +18,8 @@ import {
 import { toast } from 'sonner'
 import { Archive, CheckCircle2, XCircle, Trash2, MailPlus } from 'lucide-react'
 
+type DocumentStatus = 'DRAFT' | 'FINAL' | 'SENT' | 'FOLLOW_UP' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | 'ARCHIVED'
+
 interface PipelineActionsProps {
   documentId: string
   status: string
@@ -36,7 +38,7 @@ export function PipelineActions({ documentId, status, onDeleted }: PipelineActio
     try {
       await updateStatus({
         id: documentId as Id<'documents'>,
-        status: newStatus as any,
+        status: newStatus as DocumentStatus,
         ...extra,
       })
       toast.success('Status aktualisiert')
