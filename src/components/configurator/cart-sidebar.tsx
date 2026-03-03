@@ -41,6 +41,7 @@ export function CartSidebar({ onCreateDocument }: CartSidebarProps) {
       name: opt.name,
       priceNet: opt.priceNet,
       quantity: opt.quantity || 1,
+      priceOnRequest: opt.priceOnRequest,
     }))
 
     return calculatePricingFromItems(baseModel, optionItems)
@@ -74,7 +75,9 @@ export function CartSidebar({ onCreateDocument }: CartSidebarProps) {
               {item.name}
               {item.quantity > 1 && ` x${item.quantity}`}
             </span>
-            <span className="font-medium">{formatCurrency(item.totalNet)}</span>
+            <span className="font-medium">
+              {item.priceOnRequest ? 'a.A.' : formatCurrency(item.totalNet)}
+            </span>
           </div>
         ))}
 
@@ -93,6 +96,9 @@ export function CartSidebar({ onCreateDocument }: CartSidebarProps) {
           <span>Brutto</span>
           <span className="text-primary">{formatCurrency(pricing.totalGross)}</span>
         </div>
+        {pricing.hasOnRequestItems && (
+          <p className="text-xs text-muted-foreground">* zzgl. Positionen auf Anfrage</p>
+        )}
 
         <Button className="mt-4 w-full" size="lg" onClick={onCreateDocument}>
           {buttonLabel}

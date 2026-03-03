@@ -66,8 +66,14 @@ export function ModelPicker() {
                 />
               )}
               <p className="mt-2 text-lg font-bold text-primary">
-                ab {formatCurrency(model.priceNet)}{' '}
-                <span className="text-sm font-normal text-muted-foreground">netto</span>
+                {model.priceOnRequest ? (
+                  'Preis auf Anfrage'
+                ) : (
+                  <>
+                    ab {formatCurrency(model.priceNet)}{' '}
+                    <span className="text-sm font-normal text-muted-foreground">netto</span>
+                  </>
+                )}
               </p>
             </CardContent>
           </Card>

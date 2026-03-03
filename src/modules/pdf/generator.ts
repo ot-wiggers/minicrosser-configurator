@@ -184,8 +184,13 @@ export async function generateDocumentPdf(
     drawText(ctx, item.articleNo, colArt, { size: 9 })
     drawText(ctx, item.name, colName, { size: 9 })
     drawTextRight(ctx, String(item.quantity), colQty, { size: 9 })
-    drawTextRight(ctx, formatCurrencyPdf(item.unitPriceNet), colUnit, { size: 9 })
-    drawTextRight(ctx, formatCurrencyPdf(item.totalNet), colTotal, { size: 9 })
+    if (item.priceOnRequest) {
+      drawTextRight(ctx, 'a.A.', colUnit, { size: 9 })
+      drawTextRight(ctx, 'a.A.', colTotal, { size: 9 })
+    } else {
+      drawTextRight(ctx, formatCurrencyPdf(item.unitPriceNet), colUnit, { size: 9 })
+      drawTextRight(ctx, formatCurrencyPdf(item.totalNet), colTotal, { size: 9 })
+    }
     moveDown(ctx)
 
     // Row separator line (between rows, at top edge of next row area)
@@ -220,6 +225,15 @@ export async function generateDocumentPdf(
     size: 10,
     bold: true,
   })
+
+  if (doc.pricing.hasOnRequestItems) {
+    moveDown(ctx, 8)
+    drawText(ctx, '* zzgl. Positionen auf Anfrage', summaryX, {
+      size: 8,
+      color: { r: 0.5, g: 0.5, b: 0.5 },
+    })
+  }
+
   moveDown(ctx, 120)
 
   // ── Notes ──

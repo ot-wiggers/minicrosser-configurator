@@ -51,6 +51,7 @@ function SingleGroup({
         name: item.name,
         priceNet: item.priceNet,
         quantity: 1,
+        priceOnRequest: item.priceOnRequest || undefined,
       })
     }
   }
@@ -87,7 +88,11 @@ function SingleGroup({
                   )}
                 </div>
                 <p className="font-semibold">
-                  {item.priceNet > 0 ? formatCurrency(item.priceNet) : 'Inklusive'}
+                  {item.priceOnRequest
+                    ? 'a.A.'
+                    : item.priceNet > 0
+                      ? formatCurrency(item.priceNet)
+                      : 'Inklusive'}
                 </p>
               </CardContent>
             </Card>
@@ -115,6 +120,7 @@ function MultiGroup({
       name: item.name,
       priceNet: item.priceNet,
       quantity: 1,
+      priceOnRequest: item.priceOnRequest || undefined,
     })
   }
 
@@ -159,7 +165,13 @@ function MultiGroup({
                     className="w-20"
                   />
                 )}
-                <p className="font-semibold">{formatCurrency(item.priceNet)}</p>
+                <p className="font-semibold">
+                  {item.priceOnRequest
+                    ? 'a.A.'
+                    : item.priceNet > 0
+                      ? formatCurrency(item.priceNet)
+                      : 'Inklusive'}
+                </p>
               </CardContent>
             </Card>
           )
