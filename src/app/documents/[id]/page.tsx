@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { ArrowLeft, Download, FileText, Mail, CheckCircle, Pencil } from 'lucide-react'
 import { SendEmailDialog } from '@/components/documents/send-email-dialog'
+import { PipelineActions } from '@/components/documents/pipeline-actions'
 import type { BlankPdfCatalogData } from '@/modules/pdf/blank-generator'
 
 function downloadPdf(bytes: Uint8Array, filename: string) {
@@ -225,6 +226,14 @@ export default function DocumentPage() {
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="mb-4">
+        <PipelineActions
+          documentId={doc._id}
+          status={doc.status}
+          onDeleted={() => router.push('/')}
+        />
       </div>
 
       <div className="space-y-6">

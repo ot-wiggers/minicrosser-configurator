@@ -7,22 +7,36 @@ import { api } from '../../../convex/_generated/api'
 import { useOnlineStatus } from '@/hooks/use-online-status'
 import { db } from '@/modules/storage/db'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { Search, FileText } from 'lucide-react'
 
-const statusVariant: Record<string, 'default' | 'secondary' | 'destructive'> = {
+const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   DRAFT: 'secondary',
   FINAL: 'default',
   SENT: 'default',
+  FOLLOW_UP: 'outline',
+  ACCEPTED: 'default',
+  DECLINED: 'destructive',
+  EXPIRED: 'secondary',
+  ARCHIVED: 'secondary',
 }
 
 const statusLabel: Record<string, string> = {
   DRAFT: 'Entwurf',
   FINAL: 'Final',
   SENT: 'Versendet',
+  FOLLOW_UP: 'Nachfassen',
+  ACCEPTED: 'Angenommen',
+  DECLINED: 'Abgelehnt',
+  EXPIRED: 'Abgelaufen',
+  ARCHIVED: 'Archiviert',
 }
+
+const OPEN_STATUSES = new Set(['DRAFT', 'FINAL', 'SENT', 'FOLLOW_UP'])
+const ARCHIVED_STATUSES = new Set(['ARCHIVED', 'DECLINED', 'EXPIRED', 'ACCEPTED'])
 
 const typeLabel: Record<string, string> = {
   QUOTE: 'Angebot',
@@ -64,6 +78,7 @@ function DocumentCard({ doc }: { doc: any }) {
 export function DocumentList() {
   const isOnline = useOnlineStatus()
   const [searchQuery, setSearchQuery] = useState('')
+  const [filter, setFilter] = useState<'all' | 'open' | 'archived'>('open')
   const [localDocs, setLocalDocs] = useState<any[]>([])
 
   // Load local documents from Dexie
@@ -116,8 +131,32 @@ export function DocumentList() {
     }))
   }, [isOnline, searchQuery, searchResults, allDocuments, localDocs])
 
+  const filteredDocuments = useMemo(() => {
+    if (filter === 'all') return documents
+    if (filter === 'open') return documents.filter((d: any) => OPEN_STATUSES.has(d.status))
+    return documents.filter((d: any) => ARCHIVED_STATUSES.has(d.status))
+  }, [documents, filter])
+
   return (
     <div className="space-y-4">
+      {/* Filter tabs */}
+      <div className="flex gap-1 rounded-lg bg-muted p-1">
+        {(['open', 'all', 'archived'] as const).map((f) => (
+          <Button
+            key={f}
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'flex-1',
+              filter === f && 'bg-background shadow-sm',
+            )}
+            onClick={() => setFilter(f)}
+          >
+            {f === 'open' ? 'Offen' : f === 'all' ? 'Alle' : 'Archiviert'}
+          </Button>
+        ))}
+      </div>
+
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -128,14 +167,14 @@ export function DocumentList() {
         />
       </div>
 
-      {documents.length === 0 ? (
+      {filteredDocuments.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <FileText className="mb-4 h-12 w-12" />
           <p>Noch keine Dokumente vorhanden</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {documents.map((doc: any) =>
+          {filteredDocuments.map((doc: any) =>
             doc._isLocal ? (
               <div key={doc._id}>
                 <DocumentCard doc={doc} />
