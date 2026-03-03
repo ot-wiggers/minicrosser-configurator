@@ -161,6 +161,7 @@ function OptionFormInner({
   const [sortOrder, setSortOrder] = useState(option ? String(option.sortOrder) : '0')
   const [isActive, setIsActive] = useState(option?.isActive ?? true)
   const [isDefault, setIsDefault] = useState(option?.isDefault ?? false)
+  const [priceOnRequest, setPriceOnRequest] = useState(option?.priceOnRequest ?? false)
   const [imageStorageId, setImageStorageId] = useState<string | undefined>(option?.imageStorageId as string | undefined)
   const [restrictToModels, setRestrictToModels] = useState<string[]>(option?.restrictToModels ?? [])
 
@@ -179,6 +180,7 @@ function OptionFormInner({
       setSortOrder(String(option.sortOrder))
       setIsActive(option.isActive)
       setIsDefault(option.isDefault)
+      setPriceOnRequest(option.priceOnRequest ?? false)
       setImageStorageId(option.imageStorageId as string | undefined)
       setRestrictToModels(option.restrictToModels ?? [])
     }
@@ -227,11 +229,12 @@ function OptionFormInner({
           articleNo: articleNo.trim(),
           name: name.trim(),
           description: description.trim() || undefined,
-          priceNet: netVal,
-          priceGross: grossVal,
+          priceNet: priceOnRequest ? 0 : netVal,
+          priceGross: priceOnRequest ? 0 : grossVal,
           sortOrder: parseInt(sortOrder, 10) || 0,
           isActive,
           isDefault,
+          priceOnRequest: priceOnRequest || undefined,
           restrictToModels: restrictToModels.length > 0 ? restrictToModels : undefined,
         }
         if (imageStorageId) {
@@ -248,11 +251,12 @@ function OptionFormInner({
           articleNo: articleNo.trim(),
           name: name.trim(),
           description: description.trim() || undefined,
-          priceNet: netVal,
-          priceGross: grossVal,
+          priceNet: priceOnRequest ? 0 : netVal,
+          priceGross: priceOnRequest ? 0 : grossVal,
           sortOrder: parseInt(sortOrder, 10) || 0,
           isActive,
           isDefault,
+          priceOnRequest: priceOnRequest || undefined,
           restrictToModels: restrictToModels.length > 0 ? restrictToModels : undefined,
         }
         if (imageStorageId) {
@@ -336,34 +340,42 @@ function OptionFormInner({
           />
         </div>
 
-        {/* Price Net / Gross */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="priceNet">Preis Netto (EUR) *</Label>
-            <Input
-              id="priceNet"
-              type="number"
-              step="0.01"
-              min="0"
-              value={priceNet}
-              onChange={(e) => handlePriceNetChange(e.target.value)}
-              placeholder="0.00"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="priceGross">Preis Brutto (EUR) *</Label>
-            <Input
-              id="priceGross"
-              type="number"
-              step="0.01"
-              min="0"
-              value={priceGross}
-              onChange={(e) => handleGrossChange(e.target.value)}
-              placeholder="0.00"
-            />
-          </div>
+        {/* Price on Request */}
+        <div className="flex items-center justify-between">
+          <Label htmlFor="priceOnRequest">Preis auf Anfrage</Label>
+          <Switch id="priceOnRequest" checked={priceOnRequest} onCheckedChange={setPriceOnRequest} />
         </div>
+
+        {/* Price Net / Gross */}
+        {!priceOnRequest && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="priceNet">Preis Netto (EUR) *</Label>
+              <Input
+                id="priceNet"
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceNet}
+                onChange={(e) => handlePriceNetChange(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="priceGross">Preis Brutto (EUR) *</Label>
+              <Input
+                id="priceGross"
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceGross}
+                onChange={(e) => handleGrossChange(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Sort Order */}
         <div className="space-y-2">

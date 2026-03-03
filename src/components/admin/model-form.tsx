@@ -53,6 +53,7 @@ function ModelFormInner({
         priceGross: model.priceGross,
         sortOrder: model.sortOrder,
         isActive: model.isActive,
+        priceOnRequest: model.priceOnRequest ?? false,
         imageStorageId: model.imageStorageId as string | undefined,
         specs: (model.specs ?? []) as Array<{ label: string; value: string }>,
       }
@@ -67,6 +68,7 @@ function ModelFormInner({
       priceGross: 0,
       sortOrder: 0,
       isActive: true,
+      priceOnRequest: false,
       imageStorageId: undefined as string | undefined,
       specs: [] as Array<{ label: string; value: string }>,
     }
@@ -90,6 +92,7 @@ function ModelFormInner({
         priceGross: model.priceGross,
         sortOrder: model.sortOrder,
         isActive: model.isActive,
+        priceOnRequest: model.priceOnRequest ?? false,
         imageStorageId: model.imageStorageId as string | undefined,
         specs: (model.specs ?? []) as Array<{ label: string; value: string }>,
       })
@@ -147,6 +150,7 @@ function ModelFormInner({
           priceGross: form.priceGross,
           sortOrder: form.sortOrder,
           isActive: form.isActive,
+          priceOnRequest: form.priceOnRequest || undefined,
           specs: form.specs.filter((s) => s.label.trim() && s.value.trim()),
         }
         if (form.imageStorageId) {
@@ -167,6 +171,7 @@ function ModelFormInner({
           priceGross: form.priceGross,
           sortOrder: form.sortOrder,
           isActive: form.isActive,
+          priceOnRequest: form.priceOnRequest || undefined,
           specs: form.specs.filter((s) => s.label.trim() && s.value.trim()),
         }
         if (form.imageStorageId) {
@@ -248,45 +253,59 @@ function ModelFormInner({
             />
           </div>
 
-          {/* Price Net */}
-          <div className="space-y-2">
-            <Label htmlFor="priceNet">Preis Netto (EUR)</Label>
-            <Input
-              id="priceNet"
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.priceNet}
-              onChange={(e) => updateField('priceNet', parseFloat(e.target.value) || 0)}
+          {/* Price on Request */}
+          <div className="flex items-center gap-3">
+            <Switch
+              id="priceOnRequest"
+              checked={form.priceOnRequest}
+              onCheckedChange={(checked) => updateField('priceOnRequest', checked)}
             />
+            <Label htmlFor="priceOnRequest">Preis auf Anfrage</Label>
           </div>
 
-          {/* Price Gross */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="priceGross">Preis Brutto (EUR)</Label>
-              {grossOverridden && (
-                <button
-                  type="button"
-                  onClick={resetGrossToCalculated}
-                  className="text-xs text-primary hover:underline"
-                >
-                  Automatisch berechnen
-                </button>
-              )}
-            </div>
-            <Input
-              id="priceGross"
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.priceGross}
-              onChange={(e) => handleGrossChange(parseFloat(e.target.value) || 0)}
-            />
-            {!grossOverridden && (
-              <p className="text-xs text-muted-foreground">Automatisch berechnet (Netto x 1,19)</p>
-            )}
-          </div>
+          {!form.priceOnRequest && (
+            <>
+              {/* Price Net */}
+              <div className="space-y-2">
+                <Label htmlFor="priceNet">Preis Netto (EUR)</Label>
+                <Input
+                  id="priceNet"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.priceNet}
+                  onChange={(e) => updateField('priceNet', parseFloat(e.target.value) || 0)}
+                />
+              </div>
+
+              {/* Price Gross */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="priceGross">Preis Brutto (EUR)</Label>
+                  {grossOverridden && (
+                    <button
+                      type="button"
+                      onClick={resetGrossToCalculated}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Automatisch berechnen
+                    </button>
+                  )}
+                </div>
+                <Input
+                  id="priceGross"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.priceGross}
+                  onChange={(e) => handleGrossChange(parseFloat(e.target.value) || 0)}
+                />
+                {!grossOverridden && (
+                  <p className="text-xs text-muted-foreground">Automatisch berechnet (Netto x 1,19)</p>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Sort Order */}
           <div className="space-y-2">

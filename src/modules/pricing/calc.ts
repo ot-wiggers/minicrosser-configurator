@@ -7,6 +7,7 @@ interface PricingItem {
   articleNo: string
   name: string
   priceNet: number
+  priceOnRequest?: boolean
 }
 
 export function calculatePricingFromItems(
@@ -22,8 +23,9 @@ export function calculatePricingFromItems(
     articleNo: baseModel.articleNo,
     name: baseModel.name,
     quantity: 1,
-    unitPriceNet: baseModel.priceNet,
-    totalNet: baseModel.priceNet,
+    unitPriceNet: baseModel.priceOnRequest ? 0 : baseModel.priceNet,
+    totalNet: baseModel.priceOnRequest ? 0 : baseModel.priceNet,
+    priceOnRequest: baseModel.priceOnRequest,
   })
 
   // Option line items
@@ -34,11 +36,13 @@ export function calculatePricingFromItems(
       articleNo: opt.articleNo,
       name: opt.name,
       quantity: qty,
-      unitPriceNet: opt.priceNet,
-      totalNet: opt.priceNet * qty,
+      unitPriceNet: opt.priceOnRequest ? 0 : opt.priceNet,
+      totalNet: opt.priceOnRequest ? 0 : opt.priceNet * qty,
+      priceOnRequest: opt.priceOnRequest,
     })
   }
 
+  const hasOnRequestItems = lineItems.some((item) => item.priceOnRequest)
   const totalNet = lineItems.reduce((sum, item) => sum + item.totalNet, 0)
   const vatAmount = Math.round(totalNet * vatRate * 100) / 100
   const totalGross = Math.round((totalNet + vatAmount) * 100) / 100
@@ -49,5 +53,6 @@ export function calculatePricingFromItems(
     vatRate,
     vatAmount,
     totalGross,
+    hasOnRequestItems,
   }
 }
