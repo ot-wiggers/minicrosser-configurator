@@ -21,6 +21,7 @@ const lineItemValidator = v.object({
   quantity: v.number(),
   unitPriceNet: v.number(),
   totalNet: v.number(),
+  priceOnRequest: v.optional(v.boolean()),
 })
 
 const pricingValidator = v.object({
@@ -29,6 +30,7 @@ const pricingValidator = v.object({
   vatRate: v.number(),
   vatAmount: v.number(),
   totalGross: v.number(),
+  hasOnRequestItems: v.optional(v.boolean()),
 })
 
 const selectedOptionValidator = v.object({
@@ -38,6 +40,7 @@ const selectedOptionValidator = v.object({
   name: v.string(),
   priceNet: v.number(),
   quantity: v.number(),
+  priceOnRequest: v.optional(v.boolean()),
 })
 
 export const list = query({
@@ -49,7 +52,16 @@ export const list = query({
 
 export const listByStatus = query({
   args: {
-    status: v.union(v.literal('DRAFT'), v.literal('FINAL'), v.literal('SENT')),
+    status: v.union(
+      v.literal('DRAFT'),
+      v.literal('FINAL'),
+      v.literal('SENT'),
+      v.literal('FOLLOW_UP'),
+      v.literal('ACCEPTED'),
+      v.literal('DECLINED'),
+      v.literal('EXPIRED'),
+      v.literal('ARCHIVED'),
+    ),
   },
   handler: async (ctx, args) => {
     return ctx.db
@@ -104,7 +116,16 @@ export const create = mutation({
   args: {
     documentNo: v.string(),
     documentType: v.union(v.literal('QUOTE'), v.literal('ORDER')),
-    status: v.union(v.literal('DRAFT'), v.literal('FINAL'), v.literal('SENT')),
+    status: v.union(
+      v.literal('DRAFT'),
+      v.literal('FINAL'),
+      v.literal('SENT'),
+      v.literal('FOLLOW_UP'),
+      v.literal('ACCEPTED'),
+      v.literal('DECLINED'),
+      v.literal('EXPIRED'),
+      v.literal('ARCHIVED'),
+    ),
     customerId: v.optional(v.id('customers')),
     customer: customerValidator,
     pricing: pricingValidator,
@@ -114,6 +135,7 @@ export const create = mutation({
     notes: v.optional(v.string()),
     signatureStorageId: v.optional(v.id('_storage')),
     createdBy: v.optional(v.id('users')),
+    sentAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     return ctx.db.insert('documents', args)
@@ -123,10 +145,28 @@ export const create = mutation({
 export const updateStatus = mutation({
   args: {
     id: v.id('documents'),
-    status: v.union(v.literal('DRAFT'), v.literal('FINAL'), v.literal('SENT')),
+    status: v.union(
+      v.literal('DRAFT'),
+      v.literal('FINAL'),
+      v.literal('SENT'),
+      v.literal('FOLLOW_UP'),
+      v.literal('ACCEPTED'),
+      v.literal('DECLINED'),
+      v.literal('EXPIRED'),
+      v.literal('ARCHIVED'),
+    ),
+    sentAt: v.optional(v.number()),
+    followUpAt: v.optional(v.number()),
+    archivedAt: v.optional(v.number()),
+    pipelineNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, { status: args.status })
+    const { id, ...fields } = args
+    const updates: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(fields)) {
+      if (value !== undefined) updates[key] = value
+    }
+    await ctx.db.patch(id, updates)
   },
 })
 

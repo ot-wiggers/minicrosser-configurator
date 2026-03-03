@@ -89,6 +89,9 @@ export const create = mutation({
     imageStorageId: v.optional(v.id('_storage')),
     sortOrder: v.number(),
     isActive: v.boolean(),
+    priceOnRequest: v.optional(v.boolean()),
+    isDefault: v.optional(v.boolean()),
+    upgradeLabel: v.optional(v.string()),
     specs: v.optional(v.array(v.object({ label: v.string(), value: v.string() }))),
   },
   handler: async (ctx, args) => {
@@ -109,6 +112,9 @@ export const update = mutation({
     imageStorageId: v.optional(v.id('_storage')),
     sortOrder: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
+    priceOnRequest: v.optional(v.boolean()),
+    isDefault: v.optional(v.boolean()),
+    upgradeLabel: v.optional(v.string()),
     specs: v.optional(v.array(v.object({ label: v.string(), value: v.string() }))),
     removeImage: v.optional(v.boolean()),
   },
@@ -122,6 +128,24 @@ export const update = mutation({
       updates.imageStorageId = undefined
     }
     await ctx.db.patch(id, updates)
+  },
+})
+
+export const getDefaultByCategory = query({
+  args: { categoryId: v.id('categories') },
+  handler: async (ctx, args) => {
+    const models = await ctx.db
+      .query('baseModels')
+      .withIndex('by_categoryId', (q) => q.eq('categoryId', args.categoryId))
+      .collect()
+    const defaultModel = models.find((m) => m.isDefault && m.isActive)
+    if (!defaultModel) return null
+    return {
+      ...defaultModel,
+      imageUrl: defaultModel.imageStorageId
+        ? await ctx.storage.getUrl(defaultModel.imageStorageId)
+        : null,
+    }
   },
 })
 

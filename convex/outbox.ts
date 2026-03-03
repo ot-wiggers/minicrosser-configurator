@@ -21,8 +21,20 @@ export const listPending = query({
 export const listByDocumentId = query({
   args: { documentId: v.id('documents') },
   handler: async (ctx, args) => {
-    const all = await ctx.db.query('outbox').collect()
-    return all.filter((o) => o.documentId === args.documentId)
+    return ctx.db
+      .query('outbox')
+      .withIndex('by_documentId', (q) => q.eq('documentId', args.documentId))
+      .collect()
+  },
+})
+
+export const getByResendMessageId = query({
+  args: { resendMessageId: v.string() },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query('outbox')
+      .withIndex('by_resendMessageId', (q) => q.eq('resendMessageId', args.resendMessageId))
+      .first()
   },
 })
 
@@ -36,6 +48,7 @@ export const create = mutation({
     status: v.union(v.literal('PENDING'), v.literal('SENT'), v.literal('FAILED')),
     attempts: v.number(),
     lastError: v.optional(v.string()),
+    resendMessageId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return ctx.db.insert('outbox', args)
@@ -48,11 +61,13 @@ export const updateStatus = mutation({
     status: v.union(v.literal('PENDING'), v.literal('SENT'), v.literal('FAILED')),
     lastError: v.optional(v.string()),
     attempts: v.optional(v.number()),
+    resendMessageId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const updates: Record<string, unknown> = { status: args.status }
     if (args.lastError !== undefined) updates.lastError = args.lastError
     if (args.attempts !== undefined) updates.attempts = args.attempts
+    if (args.resendMessageId !== undefined) updates.resendMessageId = args.resendMessageId
     await ctx.db.patch(args.id, updates)
   },
 })
