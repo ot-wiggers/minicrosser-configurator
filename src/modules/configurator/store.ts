@@ -1,13 +1,14 @@
 'use client'
 
 import { create } from 'zustand'
-import type { DocumentType, SelectedOption } from '@/modules/storage/types'
+import type { DocumentType, SelectedOption, CustomLineItem } from '@/modules/storage/types'
 
 interface ConfiguratorState {
   documentType: DocumentType
   selectedCategory: string | null // Convex category _id
   selectedBaseModelId: string | null
   selectedOptions: Record<string, SelectedOption> // keyed by optionItemId
+  customLineItems: CustomLineItem[]
   currentStep: number
   editingDocumentId: string | null // Set when editing an existing document
 
@@ -19,6 +20,9 @@ interface ConfiguratorState {
   toggleOption: (option: SelectedOption) => void
   setOptionQuantity: (optionItemId: string, quantity: number) => void
   removeOption: (optionItemId: string) => void
+  addCustomLineItem: (item: Omit<CustomLineItem, 'id'>) => void
+  updateCustomLineItem: (id: string, updates: Partial<Omit<CustomLineItem, 'id'>>) => void
+  removeCustomLineItem: (id: string) => void
   setStep: (step: number) => void
   reset: () => void
   loadFromDocument: (doc: {
@@ -27,6 +31,7 @@ interface ConfiguratorState {
     selectedCategory: string
     selectedBaseModelId: string
     selectedOptions: SelectedOption[]
+    customLineItems?: CustomLineItem[]
   }) => void
 }
 
@@ -35,6 +40,7 @@ const initialState = {
   selectedCategory: null as string | null,
   selectedBaseModelId: null as string | null,
   selectedOptions: {} as Record<string, SelectedOption>,
+  customLineItems: [] as CustomLineItem[],
   currentStep: 0,
   editingDocumentId: null as string | null,
 }
@@ -49,6 +55,7 @@ export const useConfiguratorStore = create<ConfiguratorState>((set) => ({
       selectedCategory: categoryId,
       selectedBaseModelId: null,
       selectedOptions: {},
+      customLineItems: [],
       currentStep: 1,
     }),
 
@@ -57,7 +64,8 @@ export const useConfiguratorStore = create<ConfiguratorState>((set) => ({
       selectedCategory: categoryId,
       selectedBaseModelId: defaultModelId,
       selectedOptions: {},
-      currentStep: defaultModelId ? 2 : 1,
+      customLineItems: [],
+      currentStep: 1,
     }),
 
   setBaseModel: (id) => set({ selectedBaseModelId: id, currentStep: 2 }),
@@ -89,6 +97,26 @@ export const useConfiguratorStore = create<ConfiguratorState>((set) => ({
       return { selectedOptions: current }
     }),
 
+  addCustomLineItem: (item) =>
+    set((state) => ({
+      customLineItems: [
+        ...state.customLineItems,
+        { ...item, id: crypto.randomUUID() },
+      ],
+    })),
+
+  updateCustomLineItem: (id, updates) =>
+    set((state) => ({
+      customLineItems: state.customLineItems.map((item) =>
+        item.id === id ? { ...item, ...updates } : item,
+      ),
+    })),
+
+  removeCustomLineItem: (id) =>
+    set((state) => ({
+      customLineItems: state.customLineItems.filter((item) => item.id !== id),
+    })),
+
   setStep: (step) => set({ currentStep: step }),
 
   reset: () => set(initialState),
@@ -103,7 +131,8 @@ export const useConfiguratorStore = create<ConfiguratorState>((set) => ({
       selectedCategory: doc.selectedCategory,
       selectedBaseModelId: doc.selectedBaseModelId,
       selectedOptions: optionsMap,
-      currentStep: 2, // Go to accessory step for editing
+      customLineItems: doc.customLineItems ?? [],
+      currentStep: 2,
       editingDocumentId: doc._id,
     })
   },
