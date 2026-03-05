@@ -35,6 +35,7 @@ export function OptionGroupForm({ open, onOpenChange, groupId }: OptionGroupForm
   const [appliesTo, setAppliesTo] = useState<string[]>([])
   const [sortOrder, setSortOrder] = useState(0)
   const [isActive, setIsActive] = useState(true)
+  const [phase, setPhase] = useState<'VEHICLE_CONFIG' | 'ACCESSORY'>('ACCESSORY')
   const [saving, setSaving] = useState(false)
 
   const isEdit = !!groupId
@@ -48,12 +49,14 @@ export function OptionGroupForm({ open, onOpenChange, groupId }: OptionGroupForm
         setAppliesTo([...group.appliesTo])
         setSortOrder(group.sortOrder)
         setIsActive(group.isActive)
+        setPhase((group as any).phase || 'ACCESSORY')
       } else if (!groupId) {
         setName('')
         setSelectionType('SINGLE')
         setAppliesTo([])
         setSortOrder(0)
         setIsActive(true)
+        setPhase('ACCESSORY')
       }
     }
   }, [open, group, groupId])
@@ -85,6 +88,7 @@ export function OptionGroupForm({ open, onOpenChange, groupId }: OptionGroupForm
           appliesTo,
           sortOrder,
           isActive,
+          phase,
         })
         toast.success('Optionsgruppe aktualisiert.')
       } else {
@@ -94,6 +98,7 @@ export function OptionGroupForm({ open, onOpenChange, groupId }: OptionGroupForm
           appliesTo,
           sortOrder,
           isActive,
+          phase,
         })
         toast.success('Optionsgruppe erstellt.')
       }
@@ -165,6 +170,40 @@ export function OptionGroupForm({ open, onOpenChange, groupId }: OptionGroupForm
                 Mehrfachauswahl (MULTI)
               </label>
             </div>
+          </fieldset>
+
+          {/* Phase */}
+          <fieldset className="space-y-2">
+            <Label asChild>
+              <legend>Konfigurator-Phase</legend>
+            </Label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="phase"
+                  value="VEHICLE_CONFIG"
+                  checked={phase === 'VEHICLE_CONFIG'}
+                  onChange={() => setPhase('VEHICLE_CONFIG')}
+                  className="accent-primary h-4 w-4"
+                />
+                Fahrzeug Konfiguration
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="phase"
+                  value="ACCESSORY"
+                  checked={phase === 'ACCESSORY'}
+                  onChange={() => setPhase('ACCESSORY')}
+                  className="accent-primary h-4 w-4"
+                />
+                Zurüstung & Zubehör
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Bestimmt, in welchem Konfigurator-Schritt die Gruppe erscheint.
+            </p>
           </fieldset>
 
           {/* Applies To (categories) */}
