@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
-import { Search, FileText } from 'lucide-react'
+import { Search, FileText, RefreshCw, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   DRAFT: 'secondary',
@@ -80,6 +81,7 @@ export function DocumentList() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'open' | 'archived'>('open')
   const [localDocs, setLocalDocs] = useState<any[]>([])
+  const [refreshKey, setRefreshKey] = useState(0)
 
   // Load local documents from Dexie
   useEffect(() => {
@@ -89,7 +91,41 @@ export function DocumentList() {
       .toArray()
       .then(setLocalDocs)
       .catch(console.error)
-  }, [])
+  }, [refreshKey])
+
+  async function handleRetrySync(localId: number) {
+    try {
+      // Reset the sync outbox entry to PENDING so OutboxProcessor retries
+      const entries = await db.syncOutbox
+        .where('localDocId').equals(localId)
+        .toArray()
+      for (const entry of entries) {
+        await db.syncOutbox.update(entry.id!, { status: 'PENDING', attempts: 0, last_error: undefined })
+      }
+      toast.success('Synchronisierung wird erneut versucht...')
+    } catch (err) {
+      toast.error('Fehler beim Zurücksetzen')
+      console.error(err)
+    }
+  }
+
+  async function handleDeleteLocal(localId: number) {
+    try {
+      await db.documents.delete(localId)
+      // Also clean up sync outbox entries
+      const entries = await db.syncOutbox
+        .where('localDocId').equals(localId)
+        .toArray()
+      for (const entry of entries) {
+        await db.syncOutbox.delete(entry.id!)
+      }
+      setRefreshKey((k) => k + 1)
+      toast.success('Offline-Dokument gelöscht')
+    } catch (err) {
+      toast.error('Fehler beim Löschen')
+      console.error(err)
+    }
+  }
 
   // Use either search or list query depending on search input
   const allDocuments = useQuery(api.documents.list)
@@ -107,6 +143,7 @@ export function DocumentList() {
         .filter((d) => !d.convexId)
         .map((d) => ({
           _id: `local-${d.id}`,
+          _localId: d.id as number,
           documentNo: d.document_no,
           documentType: d.document_type,
           status: d.status,
@@ -176,8 +213,28 @@ export function DocumentList() {
         <div className="space-y-2">
           {filteredDocuments.map((doc: any) =>
             doc._isLocal ? (
-              <div key={doc._id}>
+              <div key={doc._id} className="space-y-1">
                 <DocumentCard doc={doc} />
+                <div className="flex gap-2 pl-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => handleRetrySync(doc._localId)}
+                  >
+                    <RefreshCw className="mr-1 h-3 w-3" />
+                    Erneut synchronisieren
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs text-destructive hover:text-destructive"
+                    onClick={() => handleDeleteLocal(doc._localId)}
+                  >
+                    <Trash2 className="mr-1 h-3 w-3" />
+                    Löschen
+                  </Button>
+                </div>
               </div>
             ) : (
               <Link key={doc._id} href={`/documents/${doc._id}`}>

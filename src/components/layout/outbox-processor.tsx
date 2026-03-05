@@ -47,11 +47,15 @@ export function OutboxProcessor() {
   // ── Document sync outbox (new) ──────────────────────────────
 
   const syncDocuments = useCallback(async () => {
+    // Process PENDING entries + retry FAILED entries with < 5 attempts
     const pendingDocs = await db.syncOutbox
-      .where('status').equals('PENDING')
+      .where('status').anyOf('PENDING', 'FAILED')
       .toArray()
+    const retryable = pendingDocs.filter(
+      (e) => e.status === 'PENDING' || (e.status === 'FAILED' && (e.attempts || 0) < 5),
+    )
 
-    for (const entry of pendingDocs) {
+    for (const entry of retryable) {
       const syncId = `sync-${entry.id}`
       if (processingRef.current.has(syncId)) continue
       processingRef.current.add(syncId)
@@ -89,6 +93,7 @@ export function OutboxProcessor() {
           selectedCategory: params.selectedCategory,
           selectedBaseModelId: params.selectedBaseModelId,
           selectedOptions: params.selectedOptions,
+          customLineItems: params.customLineItems || undefined,
           notes: params.notes || undefined,
         })
 
