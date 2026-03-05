@@ -1,5 +1,5 @@
 import { db } from '@/modules/storage/db'
-import type { DocumentRecord, CustomerData, PricingSummary, SelectedOption } from '@/modules/storage/types'
+import type { DocumentRecord, CustomerData, PricingSummary, SelectedOption, CustomLineItem } from '@/modules/storage/types'
 
 interface CreateDocumentParams {
   documentNo: string
@@ -9,6 +9,7 @@ interface CreateDocumentParams {
   selectedCategory: string
   selectedBaseModelId: string
   selectedOptions: SelectedOption[]
+  customLineItems?: CustomLineItem[]
   notes?: string
 }
 
@@ -29,6 +30,7 @@ export async function createDocumentOffline(params: CreateDocumentParams): Promi
     selectedCategory: params.selectedCategory,
     selectedBaseModelId: params.selectedBaseModelId,
     selectedOptions: params.selectedOptions,
+    customLineItems: params.customLineItems,
     notes: params.notes,
     created_at: now,
     updated_at: now,
