@@ -38,6 +38,7 @@ export default defineSchema({
     appliesTo: v.array(v.string()), // category IDs as strings, empty = all
     sortOrder: v.number(),
     isActive: v.boolean(),
+    phase: v.optional(v.union(v.literal('VEHICLE_CONFIG'), v.literal('ACCESSORY'))),
   })
     .index('by_sortOrder', ['sortOrder'])
     .index('by_isActive', ['isActive', 'sortOrder']),
@@ -129,6 +130,16 @@ export default defineSchema({
         priceOnRequest: v.optional(v.boolean()),
       }),
     ),
+    customLineItems: v.optional(v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        skuCode: v.optional(v.string()),
+        articleNo: v.optional(v.string()),
+        priceNet: v.number(),
+        quantity: v.number(),
+      }),
+    )),
     notes: v.optional(v.string()),
     signatureStorageId: v.optional(v.id('_storage')),
     createdBy: v.optional(v.id('users')),

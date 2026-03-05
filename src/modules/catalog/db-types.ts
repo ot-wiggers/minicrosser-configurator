@@ -33,6 +33,7 @@ export interface OptionGroupRecord {
   appliesTo: string[] // category IDs, empty = all
   sortOrder: number
   isActive: boolean
+  phase?: 'VEHICLE_CONFIG' | 'ACCESSORY'
 }
 
 export interface OptionRecord {

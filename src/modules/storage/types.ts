@@ -12,6 +12,15 @@ export interface SelectedOption {
   priceOnRequest?: boolean
 }
 
+export interface CustomLineItem {
+  id: string
+  name: string
+  skuCode?: string
+  articleNo?: string
+  priceNet: number
+  quantity: number
+}
+
 export interface CustomerData {
   company: string
   firstName: string
@@ -55,6 +64,7 @@ export interface DocumentRecord {
   selectedCategory: string
   selectedBaseModelId: string
   selectedOptions: SelectedOption[]
+  customLineItems?: CustomLineItem[]
   notes?: string
   created_at: string
   updated_at: string
