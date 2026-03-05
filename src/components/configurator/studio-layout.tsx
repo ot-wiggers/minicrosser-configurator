@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Car, Check, Circle, Minus, Package, Plus } from 'lucide-react'
+import { UpgradePicker } from './upgrade-picker'
 import { ViewToggle } from './view-toggle'
 
 // ── Types ──────────────────────────────────────────────────
@@ -328,7 +329,7 @@ function MultiOptionGroup({ group, items }: { group: any; items: any[] }) {
 
 // ── Main Studio Layout ─────────────────────────────────────
 export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutProps) {
-  const { documentType, selectedCategory, selectedBaseModelId, selectedOptions } =
+  const { documentType, selectedCategory, selectedBaseModelId, selectedOptions, currentStep, setStep } =
     useConfiguratorStore()
 
   const baseModel = useQuery(
@@ -340,6 +341,12 @@ export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutPro
     api.optionGroups.listWithOptionsForCategory,
     selectedCategory ? { categoryId: selectedCategory, baseModelId: selectedBaseModelId ?? undefined } : 'skip',
   )
+
+  const currentPhase = currentStep === 1 ? 'VEHICLE_CONFIG' : 'ACCESSORY'
+  const filteredGroups = groupsWithOptions?.filter(({ group }) => {
+    const groupPhase = group.phase || 'ACCESSORY'
+    return groupPhase === currentPhase
+  })
 
   // Find selected color option for image variant lookup
   const selectedColorOptionId = useMemo(() => {
@@ -438,9 +445,34 @@ export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutPro
 
           <Separator className="mb-6" />
 
+          {/* Step navigation */}
+          <div className="mb-4 flex gap-2">
+            <button
+              className={cn(
+                'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+                currentStep === 1 ? 'text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80',
+              )}
+              style={currentStep === 1 ? { backgroundColor: ACCENT, color: PRIMARY_DARK } : undefined}
+              onClick={() => setStep(1)}
+            >
+              Fahrzeug Konfiguration
+            </button>
+            <button
+              className={cn(
+                'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+                currentStep === 2 ? 'text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80',
+              )}
+              style={currentStep === 2 ? { backgroundColor: ACCENT, color: PRIMARY_DARK } : undefined}
+              onClick={() => setStep(2)}
+            >
+              Zurüstung & Zubehör
+            </button>
+          </div>
+
           {/* Option groups */}
           <div className="space-y-6">
-            {groupsWithOptions.map(({ group, items }: { group: any; items: any[] }) => {
+            {currentStep === 1 && <UpgradePicker />}
+            {filteredGroups?.map(({ group, items }: { group: any; items: any[] }) => {
               if (isColorGroup(group.name) && group.selectionType === 'SINGLE') {
                 return <ColorSwatchGroup key={group._id} group={group} items={items} />
               }
@@ -467,14 +499,25 @@ export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutPro
               <p className="text-xl font-bold">{formatCurrency(pricing.totalGross)}</p>
             </div>
           )}
-          <Button
-            size="lg"
-            className="font-bold"
-            style={{ backgroundColor: ACCENT, color: PRIMARY_DARK }}
-            onClick={onCreateDocument}
-          >
-            {buttonLabel}
-          </Button>
+          {currentStep === 1 ? (
+            <Button
+              size="lg"
+              className="font-bold"
+              style={{ backgroundColor: ACCENT, color: PRIMARY_DARK }}
+              onClick={() => setStep(2)}
+            >
+              Weiter
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              className="font-bold"
+              style={{ backgroundColor: ACCENT, color: PRIMARY_DARK }}
+              onClick={onCreateDocument}
+            >
+              {buttonLabel}
+            </Button>
+          )}
         </div>
       </div>
     </div>
