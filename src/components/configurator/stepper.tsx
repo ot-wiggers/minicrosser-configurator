@@ -6,8 +6,8 @@ import { Check } from 'lucide-react'
 
 const steps = [
   { label: 'Kategorie', step: 0 },
-  { label: 'Basisfahrzeug', step: 1 },
-  { label: 'Zubehör', step: 2 },
+  { label: 'Fahrzeug Konfiguration', step: 1 },
+  { label: 'Zurüstung & Zubehör', step: 2 },
 ]
 
 export function Stepper() {

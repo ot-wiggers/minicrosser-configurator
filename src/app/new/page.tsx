@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation'
 import { useConfiguratorStore } from '@/modules/configurator'
 import { Stepper } from '@/components/configurator/stepper'
 import { CategoryPicker } from '@/components/configurator/category-picker'
-import { ModelPicker } from '@/components/configurator/model-picker'
 import { AccessoryPicker } from '@/components/configurator/accessory-picker'
 import { CartSidebar } from '@/components/configurator/cart-sidebar'
 import { CustomerFormDialog } from '@/components/configurator/customer-form-dialog'
@@ -41,8 +40,8 @@ function ConfiguratorContent() {
     localStorage.setItem(STORAGE_KEY, newView)
   }
 
-  // Studio only available after model is selected
-  const canShowStudio = currentStep >= 2
+  // Studio only available after category is selected
+  const canShowStudio = currentStep >= 1
   const showStudio = view === 'studio' && canShowStudio
 
   const title = documentType === 'QUOTE' ? 'Neues Angebot' : 'Neue Bestellung'
@@ -67,8 +66,8 @@ function ConfiguratorContent() {
           <div className="flex flex-col gap-8 lg:flex-row">
             <div className="flex-1">
               {currentStep === 0 && <CategoryPicker />}
-              {currentStep === 1 && <ModelPicker />}
-              {currentStep === 2 && <AccessoryPicker />}
+              {currentStep === 1 && <AccessoryPicker phase="VEHICLE_CONFIG" />}
+              {currentStep === 2 && <AccessoryPicker phase="ACCESSORY" />}
             </div>
 
             {currentStep >= 1 && (
