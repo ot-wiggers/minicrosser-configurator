@@ -96,6 +96,7 @@ export const create = mutation({
     appliesTo: v.array(v.string()),
     sortOrder: v.number(),
     isActive: v.boolean(),
+    phase: v.optional(v.union(v.literal('VEHICLE_CONFIG'), v.literal('ACCESSORY'))),
   },
   handler: async (ctx, args) => {
     return ctx.db.insert('optionGroups', args)
@@ -110,6 +111,7 @@ export const update = mutation({
     appliesTo: v.optional(v.array(v.string())),
     sortOrder: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
+    phase: v.optional(v.union(v.literal('VEHICLE_CONFIG'), v.literal('ACCESSORY'))),
   },
   handler: async (ctx, args) => {
     const { id, ...fields } = args

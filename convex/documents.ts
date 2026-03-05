@@ -132,6 +132,16 @@ export const create = mutation({
     selectedCategory: v.string(),
     selectedBaseModelId: v.string(),
     selectedOptions: v.array(selectedOptionValidator),
+    customLineItems: v.optional(v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        skuCode: v.optional(v.string()),
+        articleNo: v.optional(v.string()),
+        priceNet: v.number(),
+        quantity: v.number(),
+      }),
+    )),
     notes: v.optional(v.string()),
     signatureStorageId: v.optional(v.id('_storage')),
     createdBy: v.optional(v.id('users')),
@@ -178,6 +188,16 @@ export const updateDocument = mutation({
     selectedCategory: v.optional(v.string()),
     selectedBaseModelId: v.optional(v.string()),
     selectedOptions: v.optional(v.array(selectedOptionValidator)),
+    customLineItems: v.optional(v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        skuCode: v.optional(v.string()),
+        articleNo: v.optional(v.string()),
+        priceNet: v.number(),
+        quantity: v.number(),
+      }),
+    )),
     notes: v.optional(v.string()),
     signatureStorageId: v.optional(v.id('_storage')),
     customerId: v.optional(v.id('customers')),
