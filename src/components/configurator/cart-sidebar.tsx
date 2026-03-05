@@ -10,15 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
-import { ShoppingCart } from 'lucide-react'
-import { useMemo } from 'react'
+import { Input } from '@/components/ui/input'
+import { ShoppingCart, Plus, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 interface CartSidebarProps {
   onCreateDocument: () => void
 }
 
 export function CartSidebar({ onCreateDocument }: CartSidebarProps) {
-  const { documentType, selectedBaseModelId, selectedOptions } = useConfiguratorStore()
+  const { documentType, selectedBaseModelId, selectedOptions, customLineItems, addCustomLineItem, removeCustomLineItem } = useConfiguratorStore()
 
   const baseModel = useOfflineQuery(
     api.baseModels.getById,
@@ -30,6 +31,31 @@ export function CartSidebar({ onCreateDocument }: CartSidebarProps) {
       return { ...m, _id: m.id, imageUrl: null }
     },
   )
+
+  const [showCustomForm, setShowCustomForm] = useState(false)
+  const [customName, setCustomName] = useState('')
+  const [customSku, setCustomSku] = useState('')
+  const [customArticleNo, setCustomArticleNo] = useState('')
+  const [customPrice, setCustomPrice] = useState('')
+  const [customQty, setCustomQty] = useState('1')
+
+  function handleAddCustomItem() {
+    const price = parseFloat(customPrice)
+    if (!customName.trim() || isNaN(price)) return
+    addCustomLineItem({
+      name: customName.trim(),
+      skuCode: customSku.trim() || undefined,
+      articleNo: customArticleNo.trim() || undefined,
+      priceNet: price,
+      quantity: parseInt(customQty) || 1,
+    })
+    setCustomName('')
+    setCustomSku('')
+    setCustomArticleNo('')
+    setCustomPrice('')
+    setCustomQty('1')
+    setShowCustomForm(false)
+  }
 
   // Calculate pricing from store data (selectedOptions already contains pricing info)
   const pricing = useMemo(() => {
@@ -44,8 +70,16 @@ export function CartSidebar({ onCreateDocument }: CartSidebarProps) {
       priceOnRequest: opt.priceOnRequest,
     }))
 
-    return calculatePricingFromItems(baseModel, optionItems)
-  }, [baseModel, selectedOptions])
+    const customItems = customLineItems.map((item) => ({
+      skuCode: item.skuCode || '',
+      articleNo: item.articleNo || '',
+      name: item.name,
+      priceNet: item.priceNet,
+      quantity: item.quantity,
+    }))
+
+    return calculatePricingFromItems(baseModel, [...optionItems, ...customItems])
+  }, [baseModel, selectedOptions, customLineItems])
 
   if (!pricing) {
     return (
@@ -80,6 +114,93 @@ export function CartSidebar({ onCreateDocument }: CartSidebarProps) {
             </span>
           </div>
         ))}
+
+        {/* Custom line items */}
+        {customLineItems.length > 0 && (
+          <>
+            <Separator />
+            <p className="text-xs font-medium text-muted-foreground">Individuelle Positionen</p>
+            {customLineItems.map((item) => (
+              <div key={item.id} className="flex items-center justify-between text-sm">
+                <span className="flex-1">
+                  {item.name}
+                  {item.quantity > 1 && ` x${item.quantity}`}
+                </span>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium">{formatCurrency(item.priceNet * item.quantity)}</span>
+                  <button
+                    onClick={() => removeCustomLineItem(item.id)}
+                    className="ml-1 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* Add custom line item */}
+        {showCustomForm ? (
+          <div className="space-y-2 rounded-md border p-3">
+            <Input
+              placeholder="Bezeichnung *"
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              className="h-8 text-sm"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="SKU (optional)"
+                value={customSku}
+                onChange={(e) => setCustomSku(e.target.value)}
+                className="h-8 text-sm"
+              />
+              <Input
+                placeholder="Art.-Nr. (optional)"
+                value={customArticleNo}
+                onChange={(e) => setCustomArticleNo(e.target.value)}
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="Netto-Preis *"
+                type="number"
+                step="0.01"
+                value={customPrice}
+                onChange={(e) => setCustomPrice(e.target.value)}
+                className="h-8 text-sm"
+              />
+              <Input
+                placeholder="Menge"
+                type="number"
+                min="1"
+                value={customQty}
+                onChange={(e) => setCustomQty(e.target.value)}
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" className="h-7 text-xs" onClick={handleAddCustomItem}>
+                Hinzufügen
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowCustomForm(false)}>
+                Abbrechen
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => setShowCustomForm(true)}
+          >
+            <Plus className="mr-1 h-3 w-3" />
+            Individuelle Position
+          </Button>
+        )}
 
         <Separator />
 
