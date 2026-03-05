@@ -62,6 +62,7 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
     selectedCategory,
     selectedBaseModelId,
     selectedOptions,
+    customLineItems,
     editingDocumentId,
     reset,
   } = useConfiguratorStore()
@@ -203,7 +204,14 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
         priceNet: opt.priceNet,
         quantity: opt.quantity || 1,
       }))
-      const pricing = calculatePricingFromItems(baseModel, optionItems)
+      const customItems = customLineItems.map((item) => ({
+        skuCode: item.skuCode || '',
+        articleNo: item.articleNo || '',
+        name: item.name,
+        priceNet: item.priceNet,
+        quantity: item.quantity,
+      }))
+      const pricing = calculatePricingFromItems(baseModel, [...optionItems, ...customItems])
 
       if (!isOnline) {
         // ── OFFLINE PATH ──────────────────────────────────
@@ -230,6 +238,7 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
           selectedCategory,
           selectedBaseModelId,
           selectedOptions: Object.values(selectedOptions),
+          customLineItems: customLineItems.length > 0 ? customLineItems : undefined,
           notes: notes.trim() || undefined,
         })
 
@@ -286,6 +295,7 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
         selectedCategory,
         selectedBaseModelId,
         selectedOptions: Object.values(selectedOptions),
+        customLineItems: customLineItems.length > 0 ? customLineItems : undefined,
         notes: notes.trim() || undefined,
         signatureStorageId: signatureStorageId as Id<"_storage"> | undefined,
       })
@@ -318,7 +328,14 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
         priceNet: opt.priceNet,
         quantity: opt.quantity || 1,
       }))
-      const pricing = calculatePricingFromItems(baseModel, optionItems)
+      const customItems = customLineItems.map((item) => ({
+        skuCode: item.skuCode || '',
+        articleNo: item.articleNo || '',
+        name: item.name,
+        priceNet: item.priceNet,
+        quantity: item.quantity,
+      }))
+      const pricing = calculatePricingFromItems(baseModel, [...optionItems, ...customItems])
 
       // Create version snapshot of current document state
       const nextVersionNumber = latestVersion ? latestVersion.versionNumber + 1 : 1
@@ -368,6 +385,7 @@ export function CustomerFormDialog({ open, onOpenChange }: CustomerFormDialogPro
         selectedCategory,
         selectedBaseModelId,
         selectedOptions: Object.values(selectedOptions),
+        customLineItems: customLineItems.length > 0 ? customLineItems : undefined,
         notes: notes.trim() || undefined,
         signatureStorageId: signatureStorageId as Id<"_storage"> | undefined,
       })
