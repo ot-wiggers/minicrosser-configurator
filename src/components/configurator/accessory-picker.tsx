@@ -5,6 +5,7 @@ import { useConfiguratorStore } from '@/modules/configurator'
 import { useOfflineQuery } from '@/hooks/use-offline-query'
 import { useOfflineImage } from '@/hooks/use-offline-image'
 import { db } from '@/modules/storage/db'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
@@ -182,8 +183,12 @@ function MultiGroup({
   )
 }
 
-export function AccessoryPicker() {
-  const { selectedCategory, selectedBaseModelId } = useConfiguratorStore()
+interface AccessoryPickerProps {
+  phase: 'VEHICLE_CONFIG' | 'ACCESSORY'
+}
+
+export function AccessoryPicker({ phase }: AccessoryPickerProps) {
+  const { selectedCategory, selectedBaseModelId, setStep } = useConfiguratorStore()
 
   const groupsWithOptions = useOfflineQuery(
     api.optionGroups.listWithOptionsForCategory,
@@ -211,15 +216,27 @@ export function AccessoryPicker() {
     },
   )
 
-  if (!selectedCategory || !groupsWithOptions) return null
+  const filteredGroups = groupsWithOptions?.filter(({ group }) => {
+    const groupPhase = group.phase || 'ACCESSORY'
+    return groupPhase === phase
+  })
+
+  if (!selectedCategory || !filteredGroups) return null
+
+  const heading = phase === 'VEHICLE_CONFIG'
+    ? 'Fahrzeug Konfiguration'
+    : 'Zurüstung & Zubehör'
+  const subheading = phase === 'VEHICLE_CONFIG'
+    ? 'Wählen Sie Modell-Upgrade und Fahrzeugausstattung'
+    : 'Passen Sie Ihr Fahrzeug individuell an'
 
   return (
     <div>
-      <h2 className="mb-2 text-xl font-semibold">Zubehör & Optionen</h2>
-      <p className="mb-6 text-muted-foreground">Passen Sie Ihr Fahrzeug individuell an</p>
+      <h2 className="mb-2 text-xl font-semibold">{heading}</h2>
+      <p className="mb-6 text-muted-foreground">{subheading}</p>
       <div className="space-y-6">
-        <UpgradePicker />
-        {groupsWithOptions.map(({ group, items }, idx: number) => (
+        {phase === 'VEHICLE_CONFIG' && <UpgradePicker />}
+        {filteredGroups.map(({ group, items }, idx: number) => (
           <div key={group._id}>
             <Separator className="mb-6" />
             {group.selectionType === 'SINGLE' ? (
@@ -230,6 +247,13 @@ export function AccessoryPicker() {
           </div>
         ))}
       </div>
+      {phase === 'VEHICLE_CONFIG' && (
+        <div className="mt-6 flex justify-end">
+          <Button onClick={() => setStep(2)}>
+            Weiter zu Zurüstung & Zubehör
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
