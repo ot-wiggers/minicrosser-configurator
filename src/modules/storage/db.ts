@@ -54,6 +54,19 @@ export class McConfiguratorDB extends Dexie {
       users: 'id, &username',
       settings: 'key',
     })
+
+    this.version(4).stores({
+      documents: '++id, document_no, document_type, status, created_at, convexId',
+      outbox: '++id, document_id, status, created_at',
+      syncOutbox: '++id, type, status, created_at, localDocId',
+      sequences: 'key',
+      categories: 'id, sortOrder, isActive',
+      baseModels: 'id, categoryId, skuCode, sortOrder, isActive',
+      optionGroups: 'id, sortOrder, isActive',
+      options: 'id, optionGroupId, skuCode, sortOrder, isActive',
+      users: 'id, &username',
+      settings: 'key',
+    })
   }
 }
 
