@@ -20,6 +20,7 @@ interface ConfiguratorState {
   toggleOption: (option: SelectedOption) => void
   setOptionQuantity: (optionItemId: string, quantity: number) => void
   removeOption: (optionItemId: string) => void
+  setOptionInputValue: (optionItemId: string, value: string) => void
   addCustomLineItem: (item: Omit<CustomLineItem, 'id'>) => void
   updateCustomLineItem: (id: string, updates: Partial<Omit<CustomLineItem, 'id'>>) => void
   removeCustomLineItem: (id: string) => void
@@ -94,6 +95,15 @@ export const useConfiguratorStore = create<ConfiguratorState>((set) => ({
     set((state) => {
       const current = { ...state.selectedOptions }
       delete current[optionItemId]
+      return { selectedOptions: current }
+    }),
+
+  setOptionInputValue: (optionItemId, value) =>
+    set((state) => {
+      const current = { ...state.selectedOptions }
+      if (current[optionItemId]) {
+        current[optionItemId] = { ...current[optionItemId], inputValue: value }
+      }
       return { selectedOptions: current }
     }),
 
