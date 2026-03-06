@@ -51,6 +51,7 @@ export interface OptionRecord {
   isActive: boolean
   isDefault: boolean
   priceOnRequest?: boolean
+  requiresInput?: { enabled: boolean; label: string }
 }
 
 export interface UserRecord {

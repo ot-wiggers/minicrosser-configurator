@@ -10,6 +10,7 @@ export interface SelectedOption {
   priceNet: number
   quantity: number
   priceOnRequest?: boolean
+  inputValue?: string
 }
 
 export interface CustomLineItem {

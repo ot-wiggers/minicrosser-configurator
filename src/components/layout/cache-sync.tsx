@@ -209,6 +209,7 @@ async function syncOptions(items: any[]) {
       sortOrder: item.sortOrder ?? 0,
       isActive: item.isActive ?? true,
       imageStorageId: item.imageStorageId ?? null,
+      requiresInput: item.requiresInput ?? undefined,
     }))
     await db.transaction('rw', db.options, async () => {
       const existing = await db.options.toArray()
