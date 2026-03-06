@@ -74,8 +74,8 @@ export function UserForm({ userId, onClose }: UserFormProps) {
           })
         }
 
-        // Update PIN if provided (employee)
-        if (pin && role === 'employee') {
+        // Update PIN if provided (any role — used for dashboard login)
+        if (pin) {
           const bcrypt = await import('bcryptjs')
           const hash = await bcrypt.hash(pin, 10)
           await updatePin({
@@ -103,6 +103,10 @@ export function UserForm({ userId, onClose }: UserFormProps) {
           }
           const bcrypt = await import('bcryptjs')
           passwordHash = await bcrypt.hash(password, 10)
+          // Admin can also have a PIN for dashboard login
+          if (pin && pin.length >= 4) {
+            pinHash = await bcrypt.hash(pin, 10)
+          }
         } else {
           if (!pin || pin.length < 4) {
             toast.error('Bitte geben Sie eine 4-6 stellige PIN ein')
@@ -189,24 +193,22 @@ export function UserForm({ userId, onClose }: UserFormProps) {
         </div>
       )}
 
-      {role === 'employee' && (
-        <div className="space-y-2">
-          <Label htmlFor="pin">
-            {userId ? 'Neue PIN (optional)' : 'PIN (4-6 Ziffern)'}
-          </Label>
-          <Input
-            id="pin"
-            type="password"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={6}
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-            placeholder={userId ? 'Unverändert lassen...' : '4-6 stellige PIN'}
-            required={!userId && role === 'employee'}
-          />
-        </div>
-      )}
+      <div className="space-y-2">
+        <Label htmlFor="pin">
+          {userId ? 'Neue PIN (optional)' : role === 'employee' ? 'PIN (4-6 Ziffern)' : 'PIN (optional, für Dashboard-Login)'}
+        </Label>
+        <Input
+          id="pin"
+          type="password"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={6}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+          placeholder={userId ? 'Unverändert lassen...' : '4-6 stellige PIN'}
+          required={!userId && role === 'employee'}
+        />
+      </div>
 
       {userId && (
         <div className="flex items-center gap-3">

@@ -100,7 +100,7 @@ export const loginEmployee = action({
       id: args.userId,
     })
 
-    if (!user || !user.pin || user.role !== 'employee') {
+    if (!user || !user.pin) {
       throw new Error('Ungültige Anmeldedaten')
     }
 
