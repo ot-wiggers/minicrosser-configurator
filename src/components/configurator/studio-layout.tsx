@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Car, Check, Circle, Minus, Package, Plus, Trash2 } from 'lucide-react'
+import { ImageLightbox } from '@/components/ui/image-lightbox'
 import { CategoryPicker } from './category-picker'
 import { UpgradePicker } from './upgrade-picker'
 import { ViewToggle } from './view-toggle'
@@ -226,11 +227,15 @@ function SingleOptionGroup({ group, items }: { group: any; items: any[] }) {
                   {isSelected && <Circle className="h-2 w-2 fill-white text-white" />}
                 </div>
                 {item.imageUrl && (
-                  <img
-                    src={item.imageUrl}
-                    alt=""
-                    className="h-10 w-10 shrink-0 rounded-md border object-cover"
-                  />
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <ImageLightbox src={item.imageUrl} alt={item.name}>
+                      <img
+                        src={item.imageUrl}
+                        alt=""
+                        className="h-10 w-10 shrink-0 rounded-md border object-cover"
+                      />
+                    </ImageLightbox>
+                  </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{item.name}</p>
@@ -306,11 +311,15 @@ function MultiOptionGroup({ group, items }: { group: any; items: any[] }) {
                 {isSelected && <Check className="h-3 w-3 text-white" />}
               </button>
               {item.imageUrl && (
-                <img
-                  src={item.imageUrl}
-                  alt=""
-                  className="h-10 w-10 shrink-0 rounded-md border object-cover"
-                />
+                <div onClick={(e) => e.stopPropagation()}>
+                  <ImageLightbox src={item.imageUrl} alt={item.name}>
+                    <img
+                      src={item.imageUrl}
+                      alt=""
+                      className="h-10 w-10 shrink-0 rounded-md border object-cover"
+                    />
+                  </ImageLightbox>
+                </div>
               )}
               <button className="min-w-0 flex-1 text-left" onClick={() => handleToggle(item)}>
                 <p className="font-medium">{item.name}</p>

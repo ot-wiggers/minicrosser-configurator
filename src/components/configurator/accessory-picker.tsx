@@ -11,17 +11,22 @@ import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { cn, formatCurrency } from '@/lib/utils'
 import { Check, Circle } from 'lucide-react'
+import { ImageLightbox } from '@/components/ui/image-lightbox'
 import { UpgradePicker } from './upgrade-picker'
 
 function OptionThumbnail({ url, optionId }: { url?: string | null; optionId: string }) {
   const imgSrc = useOfflineImage(url ?? null, optionId, 'options')
   if (!imgSrc) return null
   return (
-    <img
-      src={imgSrc}
-      alt=""
-      className="h-12 w-12 shrink-0 rounded-md border object-cover"
-    />
+    <div onClick={(e) => e.stopPropagation()}>
+      <ImageLightbox src={imgSrc} alt="Option Vorschau">
+        <img
+          src={imgSrc}
+          alt=""
+          className="h-12 w-12 shrink-0 rounded-md border object-cover"
+        />
+      </ImageLightbox>
+    </div>
   )
 }
 
