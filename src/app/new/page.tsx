@@ -41,7 +41,7 @@ function ConfiguratorContent() {
   }
 
   // Studio only available after category is selected
-  const canShowStudio = currentStep >= 1
+  const canShowStudio = currentStep >= 0
   const showStudio = view === 'studio' && canShowStudio
 
   const title = documentType === 'QUOTE' ? 'Neues Angebot' : 'Neue Bestellung'

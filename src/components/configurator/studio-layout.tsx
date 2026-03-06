@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Car, Check, Circle, Minus, Package, Plus, Trash2 } from 'lucide-react'
+import { CategoryPicker } from './category-picker'
 import { UpgradePicker } from './upgrade-picker'
 import { ViewToggle } from './view-toggle'
 
@@ -560,6 +561,26 @@ export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutPro
     return calculatePricingFromItems(baseModel, [...optionItems, ...customItems])
   }, [baseModel, selectedOptions, customLineItems])
 
+  // Show category picker on step 0 even without base model loaded
+  if (currentStep === 0) {
+    return (
+      <div className="flex min-h-[calc(100vh-12rem)] flex-col">
+        <div className="flex flex-1 flex-col gap-6">
+          <div className="w-full">
+            <CategoryPicker />
+          </div>
+        </div>
+        <div
+          className="sticky bottom-0 -mx-4 mt-8 flex items-center justify-between gap-4 px-4 py-3 md:-mx-6 md:px-6 lg:rounded-t-xl"
+          style={{ backgroundColor: PRIMARY_DARK }}
+        >
+          <ViewToggle view="studio" onViewChange={onViewChange} />
+          <div />
+        </div>
+      </div>
+    )
+  }
+
   if (!baseModel || !groupsWithOptions) {
     return (
       <div className="flex min-h-[400px] items-center justify-center text-muted-foreground">
@@ -624,6 +645,16 @@ export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutPro
 
           {/* Step navigation */}
           <div className="mb-4 flex gap-2">
+            <button
+              className={cn(
+                'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+                currentStep === 0 ? 'text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80',
+              )}
+              style={currentStep === 0 ? { backgroundColor: ACCENT, color: PRIMARY_DARK } : undefined}
+              onClick={() => setStep(0)}
+            >
+              Kategorie
+            </button>
             <button
               className={cn(
                 'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
