@@ -32,7 +32,7 @@ function getIconForCategory(name: string): LucideIcon {
 function CategoryImage({ cat, fallbackIcon }: { cat: any; fallbackIcon: React.ReactNode }) {
   const imgSrc = useOfflineImage(cat.imageUrl, cat._id, 'categories')
   if (imgSrc) {
-    return <img src={imgSrc} alt={cat.name} className="h-10 w-10 rounded object-cover" />
+    return <img src={imgSrc} alt={cat.name} className="h-16 w-16 rounded object-cover" />
   }
   return <>{fallbackIcon}</>
 }
@@ -89,7 +89,7 @@ export function CategoryPicker() {
               }}
             >
               <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
-                <CategoryImage cat={cat} fallbackIcon={<Icon className="h-10 w-10 text-primary" />} />
+                <CategoryImage cat={cat} fallbackIcon={<Icon className="h-16 w-16 text-primary" />} />
                 <div>
                   <p className="font-semibold">{cat.name}</p>
                 </div>
