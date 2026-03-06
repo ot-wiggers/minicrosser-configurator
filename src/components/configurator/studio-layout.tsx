@@ -60,13 +60,13 @@ function ProductImagePanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="aspect-[4/3] overflow-hidden rounded-xl bg-muted">
+      <div className="overflow-hidden rounded-xl bg-muted">
         {mainImage ? (
           <img
             key={mainImage.id}
             src={mainImage.url}
             alt={baseModel.name}
-            className="h-full w-full object-cover animate-in fade-in duration-300"
+            className="max-h-[60vh] w-full object-contain animate-in fade-in duration-300"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
