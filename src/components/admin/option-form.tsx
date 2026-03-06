@@ -164,6 +164,8 @@ function OptionFormInner({
   const [priceOnRequest, setPriceOnRequest] = useState(option?.priceOnRequest ?? false)
   const [imageStorageId, setImageStorageId] = useState<string | undefined>(option?.imageStorageId as string | undefined)
   const [restrictToModels, setRestrictToModels] = useState<string[]>(option?.restrictToModels ?? [])
+  const [requiresInputEnabled, setRequiresInputEnabled] = useState(option?.requiresInput?.enabled ?? false)
+  const [requiresInputLabel, setRequiresInputLabel] = useState(option?.requiresInput?.label ?? '')
 
   const allModels = useQuery(api.baseModels.list)
 
@@ -183,6 +185,8 @@ function OptionFormInner({
       setPriceOnRequest(option.priceOnRequest ?? false)
       setImageStorageId(option.imageStorageId as string | undefined)
       setRestrictToModels(option.restrictToModels ?? [])
+      setRequiresInputEnabled(option.requiresInput?.enabled ?? false)
+      setRequiresInputLabel(option.requiresInput?.label ?? '')
     }
   }, [option])
 
@@ -236,6 +240,9 @@ function OptionFormInner({
           isDefault,
           priceOnRequest: priceOnRequest || undefined,
           restrictToModels: restrictToModels.length > 0 ? restrictToModels : undefined,
+          requiresInput: requiresInputEnabled
+            ? { enabled: true, label: requiresInputLabel.trim() || 'Eingabe' }
+            : undefined,
         }
         if (imageStorageId) {
           updateArgs.imageStorageId = imageStorageId
@@ -258,6 +265,9 @@ function OptionFormInner({
           isDefault,
           priceOnRequest: priceOnRequest || undefined,
           restrictToModels: restrictToModels.length > 0 ? restrictToModels : undefined,
+          requiresInput: requiresInputEnabled
+            ? { enabled: true, label: requiresInputLabel.trim() || 'Eingabe' }
+            : undefined,
         }
         if (imageStorageId) {
           createArgs.imageStorageId = imageStorageId
@@ -345,6 +355,33 @@ function OptionFormInner({
           <Label htmlFor="priceOnRequest">Preis auf Anfrage</Label>
           <Switch id="priceOnRequest" checked={priceOnRequest} onCheckedChange={setPriceOnRequest} />
         </div>
+
+        {/* Requires Input */}
+        <Separator />
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="requiresInput">Eingabefeld erforderlich</Label>
+            <p className="text-xs text-muted-foreground">
+              Zeigt ein Textfeld wenn diese Option ausgewählt wird
+            </p>
+          </div>
+          <Switch
+            id="requiresInput"
+            checked={requiresInputEnabled}
+            onCheckedChange={setRequiresInputEnabled}
+          />
+        </div>
+        {requiresInputEnabled && (
+          <div className="space-y-2">
+            <Label htmlFor="requiresInputLabel">Feld-Label *</Label>
+            <Input
+              id="requiresInputLabel"
+              value={requiresInputLabel}
+              onChange={(e) => setRequiresInputLabel(e.target.value)}
+              placeholder="z.B. RAL-Farbcode"
+            />
+          </div>
+        )}
 
         {/* Price Net / Gross */}
         {!priceOnRequest && (
