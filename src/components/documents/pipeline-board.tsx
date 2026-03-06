@@ -49,7 +49,7 @@ export function PipelineBoard() {
 
   const createdByFilter = isAdmin && showAll
     ? undefined
-    : (user?._id as Id<'users'> | undefined)
+    : (user?.id as Id<'users'> | undefined)
 
   const pipelineDocs = useQuery(api.documents.listForPipeline, {
     createdBy: createdByFilter,
