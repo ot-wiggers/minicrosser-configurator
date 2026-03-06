@@ -11,6 +11,28 @@ const typeLabel: Record<string, string> = {
   ORDER: 'Bestellung',
 }
 
+const statusLabel: Record<string, string> = {
+  DRAFT: 'Entwurf',
+  FINAL: 'Final',
+  SENT: 'Versendet',
+  FOLLOW_UP: 'Nachfassen',
+  ACCEPTED: 'Angenommen',
+  DECLINED: 'Abgelehnt',
+  EXPIRED: 'Abgelaufen',
+  ARCHIVED: 'Archiviert',
+}
+
+const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  DRAFT: 'secondary',
+  FINAL: 'default',
+  SENT: 'default',
+  FOLLOW_UP: 'outline',
+  ACCEPTED: 'default',
+  DECLINED: 'destructive',
+  EXPIRED: 'secondary',
+  ARCHIVED: 'secondary',
+}
+
 function EmailStatusIcon({ emailStatus, emailEvent }: { emailStatus: string | null; emailEvent: string | null }) {
   if (emailStatus === 'FAILED') {
     return <MailX className="h-4 w-4 text-destructive" />
@@ -57,10 +79,13 @@ export function PipelineCard({ doc }: PipelineCardProps) {
         <CardContent className="p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-mono text-sm font-medium">{doc.documentNo}</span>
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                   {typeLabel[doc.documentType]}
+                </Badge>
+                <Badge variant={statusVariant[doc.status]} className="text-[10px] px-1.5 py-0">
+                  {statusLabel[doc.status]}
                 </Badge>
                 <EmailStatusIcon emailStatus={doc.emailStatus} emailEvent={doc.emailEvent} />
               </div>

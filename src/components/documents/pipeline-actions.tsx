@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { Archive, CheckCircle2, XCircle, Trash2, MailPlus } from 'lucide-react'
+import { Archive, CheckCircle2, XCircle, Trash2, MailPlus, PhoneForwarded } from 'lucide-react'
 
 type DocumentStatus = 'DRAFT' | 'FINAL' | 'SENT' | 'FOLLOW_UP' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | 'ARCHIVED'
 
@@ -79,6 +79,19 @@ export function PipelineActions({ documentId, status, onDeleted }: PipelineActio
               Abgelehnt
             </Button>
           </>
+        )}
+
+        {status === 'SENT' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              handleStatusChange('FOLLOW_UP', { followUpAt: Date.now() })
+            }
+          >
+            <PhoneForwarded className="mr-2 h-4 w-4" />
+            Nachfassen
+          </Button>
         )}
 
         {status === 'FOLLOW_UP' && (

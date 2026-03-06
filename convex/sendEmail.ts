@@ -85,9 +85,11 @@ export const send = action({
         resendMessageId,
       })
 
-      // Transition document from FINAL → SENT with sentAt timestamp
+      // Transition document to SENT when email was successfully sent
+      // Works from any pre-completion status (DRAFT, FINAL)
       const doc = await ctx.runQuery(api.documents.getById, { id: record.documentId })
-      if (doc && doc.status === 'FINAL') {
+      const transitionable = new Set(['DRAFT', 'FINAL'])
+      if (doc && transitionable.has(doc.status)) {
         await ctx.runMutation(api.documents.updateStatus, {
           id: record.documentId,
           status: 'SENT',
