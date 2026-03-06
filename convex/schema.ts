@@ -56,6 +56,10 @@ export default defineSchema({
     isActive: v.boolean(),
     isDefault: v.boolean(),
     priceOnRequest: v.optional(v.boolean()),
+    requiresInput: v.optional(v.object({
+      enabled: v.boolean(),
+      label: v.string(),
+    })),
     restrictToModels: v.optional(v.array(v.string())),
   })
     .index('by_optionGroupId', ['optionGroupId', 'sortOrder'])
@@ -128,6 +132,7 @@ export default defineSchema({
         priceNet: v.number(),
         quantity: v.number(),
         priceOnRequest: v.optional(v.boolean()),
+        inputValue: v.optional(v.string()),
       }),
     ),
     customLineItems: v.optional(v.array(

@@ -91,6 +91,10 @@ export const create = mutation({
     isActive: v.boolean(),
     isDefault: v.boolean(),
     priceOnRequest: v.optional(v.boolean()),
+    requiresInput: v.optional(v.object({
+      enabled: v.boolean(),
+      label: v.string(),
+    })),
     restrictToModels: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
@@ -113,6 +117,10 @@ export const update = mutation({
     isActive: v.optional(v.boolean()),
     isDefault: v.optional(v.boolean()),
     priceOnRequest: v.optional(v.boolean()),
+    requiresInput: v.optional(v.object({
+      enabled: v.boolean(),
+      label: v.string(),
+    })),
     restrictToModels: v.optional(v.array(v.string())),
     removeImage: v.optional(v.boolean()),
   },
