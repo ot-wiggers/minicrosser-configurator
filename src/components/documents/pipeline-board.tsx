@@ -70,7 +70,7 @@ export function PipelineBoard() {
   const columns = useMemo(() => {
     return PIPELINE_COLUMNS.map((col) => ({
       ...col,
-      docs: filteredDocs.filter((d: any) => col.statuses.includes(d.status)),
+      docs: filteredDocs.filter((d: any) => (col.statuses as readonly string[]).includes(d.status)),
     }))
   }, [filteredDocs])
 
