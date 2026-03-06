@@ -212,6 +212,52 @@ export const updateDocument = mutation({
   },
 })
 
+export const listForPipeline = query({
+  args: {
+    createdBy: v.optional(v.id('users')),
+  },
+  handler: async (ctx, args) => {
+    let docs
+    if (args.createdBy) {
+      docs = await ctx.db
+        .query('documents')
+        .withIndex('by_createdBy', (q) => q.eq('createdBy', args.createdBy))
+        .collect()
+    } else {
+      docs = await ctx.db.query('documents').order('desc').collect()
+    }
+
+    const results = []
+    for (const doc of docs) {
+      const outboxEntries = await ctx.db
+        .query('outbox')
+        .withIndex('by_documentId', (q) => q.eq('documentId', doc._id))
+        .collect()
+
+      const latestOutbox = outboxEntries.length > 0
+        ? outboxEntries.sort((a, b) => b._creationTime - a._creationTime)[0]
+        : null
+
+      const emailEvents = await ctx.db
+        .query('emailEvents')
+        .withIndex('by_documentId', (q) => q.eq('documentId', doc._id))
+        .collect()
+      const latestEvent = emailEvents.length > 0
+        ? emailEvents.sort((a, b) => b.timestamp - a.timestamp)[0]
+        : null
+
+      results.push({
+        ...doc,
+        emailStatus: latestOutbox?.status ?? null,
+        emailEvent: latestEvent?.eventType ?? null,
+        emailError: latestOutbox?.status === 'FAILED' ? latestOutbox.lastError : null,
+      })
+    }
+
+    return results
+  },
+})
+
 export const remove = mutation({
   args: { id: v.id('documents') },
   handler: async (ctx, args) => {

@@ -72,6 +72,31 @@ export const updateStatus = mutation({
   },
 })
 
+export const countFailed = query({
+  args: {},
+  handler: async (ctx) => {
+    const failed = await ctx.db
+      .query('outbox')
+      .withIndex('by_status', (q) => q.eq('status', 'FAILED'))
+      .collect()
+    return failed.length
+  },
+})
+
+export const retryAllFailed = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const failed = await ctx.db
+      .query('outbox')
+      .withIndex('by_status', (q) => q.eq('status', 'FAILED'))
+      .collect()
+    for (const entry of failed) {
+      await ctx.db.patch(entry._id, { status: 'PENDING', attempts: 0, lastError: undefined })
+    }
+    return failed.length
+  },
+})
+
 export const incrementAttempts = mutation({
   args: { id: v.id('outbox') },
   handler: async (ctx, args) => {
