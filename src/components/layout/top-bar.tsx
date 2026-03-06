@@ -2,22 +2,17 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useQuery } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
 import { OnlineIndicator } from './online-indicator'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, SendHorizonal, Download } from 'lucide-react'
+import { LayoutDashboard, Download } from 'lucide-react'
 import { useInstallPrompt } from '@/hooks/use-install-prompt'
 
 export function TopBar() {
   const pathname = usePathname()
-  const outbox = useQuery(api.outbox.listPending)
-  const pendingCount = outbox?.length ?? 0
   const { canInstall, promptInstall } = useInstallPrompt()
 
   const navItems = [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard, badge: 0 },
-    { href: '/outbox', label: 'Outbox', icon: SendHorizonal, badge: pendingCount },
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   ]
 
   return (
@@ -41,11 +36,6 @@ export function TopBar() {
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
-                {item.badge > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground">
-                    {item.badge}
-                  </span>
-                )}
               </Link>
             ))}
           </nav>
