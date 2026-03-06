@@ -69,7 +69,7 @@ export const useConfiguratorStore = create<ConfiguratorState>((set) => ({
       currentStep: 1,
     }),
 
-  setBaseModel: (id) => set({ selectedBaseModelId: id, currentStep: 2 }),
+  setBaseModel: (id) => set({ selectedBaseModelId: id }),
 
   toggleOption: (option) =>
     set((state) => {
