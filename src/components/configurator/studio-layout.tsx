@@ -98,7 +98,7 @@ function ProductImagePanel({
 
 // ── Color Swatch Group ─────────────────────────────────────
 function ColorSwatchGroup({ group, items }: { group: any; items: any[] }) {
-  const { selectedOptions, toggleOption, removeOption } = useConfiguratorStore()
+  const { selectedOptions, toggleOption, removeOption, setOptionInputValue } = useConfiguratorStore()
   const currentSelection = items.find((item) => selectedOptions[item._id])
 
   function handleSelect(item: any) {
@@ -159,13 +159,26 @@ function ColorSwatchGroup({ group, items }: { group: any; items: any[] }) {
           )
         })}
       </div>
+      {currentSelection?.requiresInput?.enabled && (
+        <div className="mt-2">
+          <label className="text-xs font-medium text-muted-foreground">
+            {currentSelection.requiresInput.label}
+          </label>
+          <Input
+            placeholder={currentSelection.requiresInput.label}
+            value={selectedOptions[currentSelection._id]?.inputValue ?? ''}
+            onChange={(e) => setOptionInputValue(currentSelection._id, e.target.value)}
+            className="mt-1 h-8 w-64 text-sm"
+          />
+        </div>
+      )}
     </div>
   )
 }
 
 // ── Single Option Group (radio-style cards) ────────────────
 function SingleOptionGroup({ group, items }: { group: any; items: any[] }) {
-  const { selectedOptions, toggleOption, removeOption } = useConfiguratorStore()
+  const { selectedOptions, toggleOption, removeOption, setOptionInputValue } = useConfiguratorStore()
   const currentSelection = items.find((item) => selectedOptions[item._id])
 
   function handleSelect(item: any) {
@@ -195,39 +208,54 @@ function SingleOptionGroup({ group, items }: { group: any; items: any[] }) {
         {items.map((item: any) => {
           const isSelected = !!selectedOptions[item._id]
           return (
-            <button
-              key={item._id}
-              className={cn(
-                'flex w-full items-center gap-3 rounded-lg border-2 p-3 text-left transition-all hover:shadow-sm',
-                isSelected ? 'border-[#ffcf00] bg-[#ffcf00]/5' : 'border-border hover:border-border/80',
-              )}
-              onClick={() => handleSelect(item)}
-            >
-              <div
+            <div key={item._id}>
+              <button
                 className={cn(
-                  'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2',
-                  isSelected ? 'border-[#ffcf00] bg-[#ffcf00]' : 'border-muted-foreground/30',
+                  'flex w-full items-center gap-3 rounded-lg border-2 p-3 text-left transition-all hover:shadow-sm',
+                  isSelected ? 'border-[#ffcf00] bg-[#ffcf00]/5' : 'border-border hover:border-border/80',
                 )}
+                onClick={() => handleSelect(item)}
               >
-                {isSelected && <Circle className="h-2 w-2 fill-white text-white" />}
-              </div>
-              {item.imageUrl && (
-                <img
-                  src={item.imageUrl}
-                  alt=""
-                  className="h-10 w-10 shrink-0 rounded-md border object-cover"
-                />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{item.name}</p>
-                {item.description && (
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                <div
+                  className={cn(
+                    'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2',
+                    isSelected ? 'border-[#ffcf00] bg-[#ffcf00]' : 'border-muted-foreground/30',
+                  )}
+                >
+                  {isSelected && <Circle className="h-2 w-2 fill-white text-white" />}
+                </div>
+                {item.imageUrl && (
+                  <img
+                    src={item.imageUrl}
+                    alt=""
+                    className="h-10 w-10 shrink-0 rounded-md border object-cover"
+                  />
                 )}
-              </div>
-              <span className="shrink-0 text-sm font-semibold">
-                {item.priceNet > 0 ? formatCurrency(item.priceNet) : 'Inklusive'}
-              </span>
-            </button>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{item.name}</p>
+                  {item.description && (
+                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                  )}
+                </div>
+                <span className="shrink-0 text-sm font-semibold">
+                  {item.priceNet > 0 ? formatCurrency(item.priceNet) : 'Inklusive'}
+                </span>
+              </button>
+              {isSelected && item.requiresInput?.enabled && (
+                <div className="ml-8 mt-1 mb-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {item.requiresInput.label}
+                  </label>
+                  <Input
+                    placeholder={item.requiresInput.label}
+                    value={selectedOptions[item._id]?.inputValue ?? ''}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setOptionInputValue(item._id, e.target.value)}
+                    className="mt-1 h-8 w-64 text-sm"
+                  />
+                </div>
+              )}
+            </div>
           )
         })}
       </div>
@@ -237,7 +265,7 @@ function SingleOptionGroup({ group, items }: { group: any; items: any[] }) {
 
 // ── Multi Option Group (checkbox-style cards) ──────────────
 function MultiOptionGroup({ group, items }: { group: any; items: any[] }) {
-  const { selectedOptions, toggleOption, setOptionQuantity } = useConfiguratorStore()
+  const { selectedOptions, toggleOption, setOptionQuantity, setOptionInputValue } = useConfiguratorStore()
 
   function handleToggle(item: any) {
     toggleOption({
@@ -263,7 +291,7 @@ function MultiOptionGroup({ group, items }: { group: any; items: any[] }) {
             <div
               key={item._id}
               className={cn(
-                'flex items-center gap-3 rounded-lg border-2 p-3 transition-all',
+                'flex flex-wrap items-center gap-3 rounded-lg border-2 p-3 transition-all',
                 isSelected ? 'border-[#ffcf00] bg-[#ffcf00]/5' : 'border-border hover:border-border/80',
               )}
             >
@@ -319,6 +347,20 @@ function MultiOptionGroup({ group, items }: { group: any; items: any[] }) {
               <span className="shrink-0 text-sm font-semibold">
                 {formatCurrency(item.priceNet)}
               </span>
+              {isSelected && item.requiresInput?.enabled && (
+                <div className="w-full pt-2 pl-8">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {item.requiresInput.label}
+                  </label>
+                  <Input
+                    placeholder={item.requiresInput.label}
+                    value={selectedOptions[item._id]?.inputValue ?? ''}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setOptionInputValue(item._id, e.target.value)}
+                    className="mt-1 h-8 w-64 text-sm"
+                  />
+                </div>
+              )}
             </div>
           )
         })}

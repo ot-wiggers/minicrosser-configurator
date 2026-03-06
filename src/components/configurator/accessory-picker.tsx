@@ -32,7 +32,7 @@ function SingleGroup({
   group: any
   items: any[]
 }) {
-  const { selectedOptions, toggleOption, removeOption } = useConfiguratorStore()
+  const { selectedOptions, toggleOption, removeOption, setOptionInputValue } = useConfiguratorStore()
 
   // Find current selection for this group
   const currentSelection = items.find((item) => selectedOptions[item._id])
@@ -97,6 +97,20 @@ function SingleGroup({
                       : 'Inklusive'}
                 </p>
               </CardContent>
+              {isSelected && item.requiresInput?.enabled && (
+                <div className="border-t px-4 pb-3 pt-2">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {item.requiresInput.label}
+                  </label>
+                  <Input
+                    placeholder={item.requiresInput.label}
+                    value={selectedOptions[item._id]?.inputValue ?? ''}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setOptionInputValue(item._id, e.target.value)}
+                    className="mt-1 h-8 text-sm"
+                  />
+                </div>
+              )}
             </Card>
           )
         })}
@@ -112,7 +126,7 @@ function MultiGroup({
   group: any
   items: any[]
 }) {
-  const { selectedOptions, toggleOption, setOptionQuantity } = useConfiguratorStore()
+  const { selectedOptions, toggleOption, setOptionQuantity, setOptionInputValue } = useConfiguratorStore()
 
   function handleToggle(item: any) {
     toggleOption({
@@ -175,6 +189,20 @@ function MultiGroup({
                       : 'Inklusive'}
                 </p>
               </CardContent>
+              {isSelected && item.requiresInput?.enabled && (
+                <div className="border-t px-4 pb-3 pt-2">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {item.requiresInput.label}
+                  </label>
+                  <Input
+                    placeholder={item.requiresInput.label}
+                    value={selectedOptions[item._id]?.inputValue ?? ''}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setOptionInputValue(item._id, e.target.value)}
+                    className="mt-1 h-8 text-sm"
+                  />
+                </div>
+              )}
             </Card>
           )
         })}
