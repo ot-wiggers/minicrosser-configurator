@@ -10,7 +10,7 @@ import { cn, formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { Car, Check, Circle, Minus, Package, Plus } from 'lucide-react'
+import { Car, Check, Circle, Minus, Package, Plus, Trash2 } from 'lucide-react'
 import { UpgradePicker } from './upgrade-picker'
 import { ViewToggle } from './view-toggle'
 
@@ -327,9 +327,137 @@ function MultiOptionGroup({ group, items }: { group: any; items: any[] }) {
   )
 }
 
+// ── Custom Line Items ───────────────────────────────────
+function StudioCustomLineItems() {
+  const { customLineItems, addCustomLineItem, removeCustomLineItem } = useConfiguratorStore()
+  const [showForm, setShowForm] = useState(false)
+  const [name, setName] = useState('')
+  const [sku, setSku] = useState('')
+  const [articleNo, setArticleNo] = useState('')
+  const [price, setPrice] = useState('')
+  const [qty, setQty] = useState('1')
+
+  function handleAdd() {
+    const p = parseFloat(price)
+    if (!name.trim() || isNaN(p)) return
+    addCustomLineItem({
+      name: name.trim(),
+      skuCode: sku.trim() || undefined,
+      articleNo: articleNo.trim() || undefined,
+      priceNet: p,
+      quantity: parseInt(qty) || 1,
+    })
+    setName('')
+    setSku('')
+    setArticleNo('')
+    setPrice('')
+    setQty('1')
+    setShowForm(false)
+  }
+
+  return (
+    <div>
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        Individuelle Positionen
+      </h3>
+
+      {customLineItems.length > 0 && (
+        <div className="mb-3 space-y-2">
+          {customLineItems.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between rounded-lg border p-3"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{item.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {item.quantity > 1 ? `${item.quantity}x ` : ''}
+                  {formatCurrency(item.priceNet)}
+                </p>
+              </div>
+              <button
+                onClick={() => removeCustomLineItem(item.id)}
+                className="ml-2 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showForm ? (
+        <div className="space-y-2 rounded-lg border p-3">
+          <Input
+            placeholder="Bezeichnung *"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-8 text-sm"
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              placeholder="SKU (optional)"
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+              className="h-8 text-sm"
+            />
+            <Input
+              placeholder="Art.-Nr. (optional)"
+              value={articleNo}
+              onChange={(e) => setArticleNo(e.target.value)}
+              className="h-8 text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              placeholder="Netto-Preis *"
+              type="number"
+              step="0.01"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="h-8 text-sm"
+            />
+            <Input
+              placeholder="Menge"
+              type="number"
+              min="1"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              className="h-8 text-sm"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" className="h-7 text-xs" onClick={handleAdd}>
+              Hinzufügen
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={() => setShowForm(false)}
+            >
+              Abbrechen
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => setShowForm(true)}
+        >
+          <Plus className="mr-1 h-3 w-3" />
+          Individuelle Position
+        </Button>
+      )}
+    </div>
+  )
+}
+
 // ── Main Studio Layout ─────────────────────────────────────
 export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutProps) {
-  const { documentType, selectedCategory, selectedBaseModelId, selectedOptions, currentStep, setStep } =
+  const { documentType, selectedCategory, selectedBaseModelId, selectedOptions, customLineItems, currentStep, setStep } =
     useConfiguratorStore()
 
   const baseModel = useQuery(
@@ -380,8 +508,15 @@ export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutPro
       priceNet: opt.priceNet,
       quantity: opt.quantity || 1,
     }))
-    return calculatePricingFromItems(baseModel, optionItems)
-  }, [baseModel, selectedOptions])
+    const customItems = customLineItems.map((item) => ({
+      skuCode: item.skuCode || '',
+      articleNo: item.articleNo || '',
+      name: item.name,
+      priceNet: item.priceNet,
+      quantity: item.quantity,
+    }))
+    return calculatePricingFromItems(baseModel, [...optionItems, ...customItems])
+  }, [baseModel, selectedOptions, customLineItems])
 
   if (!baseModel || !groupsWithOptions) {
     return (
@@ -481,6 +616,8 @@ export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutPro
               }
               return <MultiOptionGroup key={group._id} group={group} items={items} />
             })}
+            <Separator />
+            <StudioCustomLineItems />
           </div>
         </div>
       </div>
