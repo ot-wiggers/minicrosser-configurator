@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { DocumentList } from '@/components/documents/document-list'
+import { PipelineBoard } from '@/components/documents/pipeline-board'
 import { BlankPdfButtons } from '@/components/dashboard/blank-pdf-buttons'
 import { EmployeeLogin } from '@/components/auth/employee-login'
 import { useConfiguratorStore } from '@/modules/configurator'
@@ -24,7 +24,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 md:px-6">
+    <div className="mx-auto max-w-7xl px-4 py-8 md:px-6">
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -69,8 +69,8 @@ export default function DashboardPage() {
       </div>
 
       <div>
-        <h2 className="mb-4 text-xl font-semibold">Letzte Dokumente</h2>
-        <DocumentList />
+        <h2 className="mb-4 text-xl font-semibold">Pipeline</h2>
+        <PipelineBoard />
       </div>
     </div>
   )
