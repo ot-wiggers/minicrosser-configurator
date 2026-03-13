@@ -42,7 +42,7 @@ export const search = query({
     const all = await ctx.db.query('customers').collect()
     return all.filter(
       (c) =>
-        c.company.toLowerCase().includes(lower) ||
+        (c.company ?? '').toLowerCase().includes(lower) ||
         c.lastName.toLowerCase().includes(lower) ||
         c.firstName.toLowerCase().includes(lower) ||
         c.email.toLowerCase().includes(lower) ||
@@ -53,7 +53,8 @@ export const search = query({
 
 export const create = mutation({
   args: {
-    company: v.string(),
+    customerType: v.union(v.literal('business'), v.literal('private')),
+    company: v.optional(v.string()),
     firstName: v.string(),
     lastName: v.string(),
     street: v.optional(v.string()),
@@ -65,6 +66,7 @@ export const create = mutation({
     customerNumber: v.optional(v.string()),
     marketingConsent: v.optional(v.boolean()),
     marketingConsentDate: v.optional(v.number()),
+    notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let customerNumber = args.customerNumber
@@ -89,6 +91,7 @@ export const create = mutation({
 export const update = mutation({
   args: {
     id: v.id('customers'),
+    customerType: v.optional(v.union(v.literal('business'), v.literal('private'))),
     company: v.optional(v.string()),
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
@@ -99,6 +102,7 @@ export const update = mutation({
     phone: v.optional(v.string()),
     contactPerson: v.optional(v.string()),
     customerNumber: v.optional(v.string()),
+    notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { id, ...fields } = args
@@ -123,7 +127,8 @@ export const remove = mutation({
  */
 export const findOrCreate = mutation({
   args: {
-    company: v.string(),
+    customerType: v.optional(v.union(v.literal('business'), v.literal('private'))),
+    company: v.optional(v.string()),
     firstName: v.string(),
     lastName: v.string(),
     street: v.optional(v.string()),
@@ -170,6 +175,11 @@ export const findOrCreate = mutation({
     }
     const customerNumber = `K-${nextVal}`
 
-    return ctx.db.insert('customers', { ...args, customerNumber })
+    return ctx.db.insert('customers', {
+      ...args,
+      customerType: args.customerType ?? 'business',
+      company: args.company ?? '',
+      customerNumber,
+    })
   },
 })
