@@ -4,6 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { SettingsForm } from '@/components/admin/settings-form'
 import { ApiSettingsTab } from '@/components/admin/api-settings-tab'
 import { MiscSettingsTab } from '@/components/admin/misc-settings-tab'
+import { CustomerActionsSettings } from '@/components/admin/customer-actions-settings'
 import UsersContent from '@/app/admin/(authenticated)/users/page'
 import ImportExportContent from '@/app/admin/(authenticated)/import-export/page'
 
@@ -17,6 +18,7 @@ export default function SettingsPage() {
           <TabsTrigger value="api">API-Schnittstellen</TabsTrigger>
           <TabsTrigger value="users">Benutzer</TabsTrigger>
           <TabsTrigger value="import-export">Import / Export</TabsTrigger>
+          <TabsTrigger value="customer-actions">Kundenaktionen</TabsTrigger>
           <TabsTrigger value="misc">Sonstiges</TabsTrigger>
         </TabsList>
         <TabsContent value="pdf">
@@ -30,6 +32,9 @@ export default function SettingsPage() {
         </TabsContent>
         <TabsContent value="import-export">
           <ImportExportContent />
+        </TabsContent>
+        <TabsContent value="customer-actions">
+          <CustomerActionsSettings />
         </TabsContent>
         <TabsContent value="misc">
           <MiscSettingsTab />

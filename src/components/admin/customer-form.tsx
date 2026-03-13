@@ -41,6 +41,8 @@ export function CustomerForm({ open, onOpenChange, customerId }: CustomerFormPro
   const [phone, setPhone] = useState('')
   const [contactPerson, setContactPerson] = useState('')
   const [customerNumber, setCustomerNumber] = useState('')
+  const [customerType, setCustomerType] = useState<'business' | 'private'>('business')
+  const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
 
   const isEdit = !!customerId
@@ -48,7 +50,8 @@ export function CustomerForm({ open, onOpenChange, customerId }: CustomerFormPro
   useEffect(() => {
     if (open) {
       if (customer) {
-        setCompany(customer.company)
+        setCustomerType((customer as any).customerType ?? 'business')
+        setCompany(customer.company ?? '')
         setFirstName(customer.firstName)
         setLastName(customer.lastName)
         setStreet(customer.street ?? '')
@@ -58,7 +61,9 @@ export function CustomerForm({ open, onOpenChange, customerId }: CustomerFormPro
         setPhone(customer.phone ?? '')
         setContactPerson(customer.contactPerson ?? '')
         setCustomerNumber(customer.customerNumber ?? '')
+        setNotes((customer as any).notes ?? '')
       } else if (!customerId) {
+        setCustomerType('business')
         setCompany('')
         setFirstName('')
         setLastName('')
@@ -69,6 +74,7 @@ export function CustomerForm({ open, onOpenChange, customerId }: CustomerFormPro
         setPhone('')
         setContactPerson('')
         setCustomerNumber('')
+        setNotes('')
       }
     }
   }, [open, customer, customerId])
@@ -79,7 +85,7 @@ export function CustomerForm({ open, onOpenChange, customerId }: CustomerFormPro
     const trimmedCompany = company.trim()
     const trimmedEmail = email.trim()
 
-    if (!trimmedCompany) {
+    if (customerType === 'business' && !trimmedCompany) {
       toast.error('Bitte eine Firma eingeben.')
       return
     }
@@ -97,7 +103,8 @@ export function CustomerForm({ open, onOpenChange, customerId }: CustomerFormPro
       if (isEdit && customerId) {
         await updateCustomer({
           id: customerId as Id<"customers">,
-          company: trimmedCompany,
+          customerType,
+          company: trimmedCompany || undefined,
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           street: street.trim() || undefined,
@@ -107,11 +114,13 @@ export function CustomerForm({ open, onOpenChange, customerId }: CustomerFormPro
           phone: phone.trim() || undefined,
           contactPerson: contactPerson.trim() || undefined,
           customerNumber: customerNumber.trim() || undefined,
+          notes: notes.trim() || undefined,
         })
         toast.success('Kunde aktualisiert.')
       } else {
         await createCustomer({
-          company: trimmedCompany,
+          customerType,
+          company: trimmedCompany || undefined,
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           street: street.trim() || undefined,
@@ -121,6 +130,7 @@ export function CustomerForm({ open, onOpenChange, customerId }: CustomerFormPro
           phone: phone.trim() || undefined,
           contactPerson: contactPerson.trim() || undefined,
           customerNumber: customerNumber.trim() || undefined,
+          notes: notes.trim() || undefined,
         })
         toast.success('Kunde erstellt.')
       }
@@ -147,13 +157,39 @@ export function CustomerForm({ open, onOpenChange, customerId }: CustomerFormPro
 
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto px-4">
           <div className="space-y-2">
-            <Label htmlFor="customer-company">Firma *</Label>
+            <Label>Kundentyp</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={customerType === 'business' ? 'default' : 'outline'}
+                size="sm"
+                className="flex-1"
+                onClick={() => setCustomerType('business')}
+              >
+                Geschaeftlich
+              </Button>
+              <Button
+                type="button"
+                variant={customerType === 'private' ? 'default' : 'outline'}
+                size="sm"
+                className="flex-1"
+                onClick={() => setCustomerType('private')}
+              >
+                Privat
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="customer-company">
+              {customerType === 'business' ? 'Firma *' : 'Firma (optional)'}
+            </Label>
             <Input
               id="customer-company"
               value={company}
               onChange={(e) => setCompany(e.target.value)}
               placeholder="Mustermann GmbH"
-              required
+              required={customerType === 'business'}
             />
           </div>
 
@@ -244,13 +280,27 @@ export function CustomerForm({ open, onOpenChange, customerId }: CustomerFormPro
             </div>
           </div>
 
+          {customerType === 'business' && (
+            <div className="space-y-2">
+              <Label htmlFor="customer-contactPerson">Ansprechpartner</Label>
+              <Input
+                id="customer-contactPerson"
+                value={contactPerson}
+                onChange={(e) => setContactPerson(e.target.value)}
+                placeholder="Frau Schmidt"
+              />
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label htmlFor="customer-contactPerson">Ansprechpartner</Label>
-            <Input
-              id="customer-contactPerson"
-              value={contactPerson}
-              onChange={(e) => setContactPerson(e.target.value)}
-              placeholder="Frau Schmidt"
+            <Label htmlFor="customer-notes">Notizen</Label>
+            <textarea
+              id="customer-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Notizen zum Kunden..."
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              rows={3}
             />
           </div>
         </form>
