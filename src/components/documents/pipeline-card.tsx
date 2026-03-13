@@ -69,6 +69,7 @@ interface PipelineCardProps {
     emailEvent: string | null
     emailError: string | null
     createdByName?: string
+    actionCount?: { checked: number; total: number } | null
   }
 }
 
@@ -91,6 +92,11 @@ export function PipelineCard({ doc }: PipelineCardProps) {
               </div>
               <p className="mt-0.5 truncate text-sm text-muted-foreground">
                 {doc.customer.company || `${doc.customer.firstName} ${doc.customer.lastName}`}
+                {doc.actionCount && doc.actionCount.total > 0 && (
+                  <span className="ml-2 text-xs">
+                    {doc.actionCount.checked}/{doc.actionCount.total} erledigt
+                  </span>
+                )}
               </p>
             </div>
             <span className="shrink-0 text-sm font-semibold">
