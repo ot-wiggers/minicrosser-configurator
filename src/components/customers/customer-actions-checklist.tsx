@@ -61,7 +61,7 @@ export function CustomerActionsChecklist({ customerId }: CustomerActionsChecklis
                     customerId: customerId as Id<'customers'>,
                     actionId: action._id,
                     checked: !!checked,
-                    userId: user?._id as Id<'users'> | undefined,
+                    userId: user?.id as Id<'users'> | undefined,
                   })
                 }
               />

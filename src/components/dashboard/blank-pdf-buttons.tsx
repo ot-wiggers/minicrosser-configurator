@@ -53,7 +53,7 @@ export function BlankPdfButtons() {
     },
   )
 
-  const logoStorageId = allSettings?.find((s) => s.key === 'logoStorageId')?.value as string | undefined
+  const logoStorageId = allSettings?.find((s: any) => s.key === 'logoStorageId')?.value as string | undefined
   const logoUrl = useQuery(
     api.files.getUrl,
     logoStorageId ? { storageId: logoStorageId as Id<'_storage'> } : 'skip',
@@ -81,7 +81,7 @@ export function BlankPdfButtons() {
             isActive: m.isActive,
             sortOrder: m.sortOrder,
           })),
-        optionGroups: allOptionGroups.map((g) => ({
+        optionGroups: allOptionGroups.map((g: any) => ({
           _id: g._id,
           name: g.name,
           selectionType: g.selectionType,
@@ -89,7 +89,7 @@ export function BlankPdfButtons() {
           sortOrder: g.sortOrder,
           appliesTo: g.appliesTo ?? [],
         })),
-        options: allOptions.map((o) => ({
+        options: allOptions.map((o: any) => ({
           optionGroupId: o.optionGroupId,
           articleNo: o.articleNo,
           name: o.name,
@@ -112,7 +112,7 @@ export function BlankPdfButtons() {
         }
       }
       const settingsMap = allSettings
-        ? Object.fromEntries(allSettings.map((s) => [s.key, s.value]))
+        ? Object.fromEntries(allSettings.map((s: any) => [s.key, s.value]))
         : undefined
 
       // Fetch category image
@@ -147,7 +147,7 @@ export function BlankPdfButtons() {
 
   return (
     <div className="flex flex-wrap gap-2">
-      {categories.map((cat) => (
+      {categories.map((cat: any) => (
         <Button
           key={cat._id}
           variant="outline"

@@ -159,15 +159,15 @@ export function CustomerActionsSettings() {
               <div className="space-y-2">
                 <Label>Name *</Label>
                 <Input
-                  value={editing.label}
-                  onChange={(e) => setEditing({ ...editing, label: e.target.value })}
+                  value={editing!.label}
+                  onChange={(e) => setEditing({ ...editing!, label: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Beschreibung</Label>
                 <Input
-                  value={editing.description}
-                  onChange={(e) => setEditing({ ...editing, description: e.target.value })}
+                  value={editing!.description}
+                  onChange={(e) => setEditing({ ...editing!, description: e.target.value })}
                 />
               </div>
               <div className="flex items-center gap-4">
@@ -175,15 +175,15 @@ export function CustomerActionsSettings() {
                   <Label>Reihenfolge</Label>
                   <Input
                     type="number"
-                    value={editing.sortOrder}
-                    onChange={(e) => setEditing({ ...editing, sortOrder: Number(e.target.value) })}
+                    value={editing!.sortOrder}
+                    onChange={(e) => setEditing({ ...editing!, sortOrder: Number(e.target.value) })}
                     className="w-20"
                   />
                 </div>
                 <div className="flex items-center gap-2 pt-6">
                   <Switch
-                    checked={editing.isActive}
-                    onCheckedChange={(checked) => setEditing({ ...editing, isActive: checked })}
+                    checked={editing!.isActive}
+                    onCheckedChange={(checked) => setEditing({ ...editing!, isActive: checked })}
                   />
                   <Label>Aktiv</Label>
                 </div>
