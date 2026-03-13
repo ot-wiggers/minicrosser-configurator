@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useQuery } from 'convex/react'
+import { useOfflineQuery } from '@/hooks/use-offline-query'
+import { db } from '@/modules/storage/db'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { Button } from '@/components/ui/button'
@@ -11,11 +13,45 @@ import type { BlankPdfCatalogData } from '@/modules/pdf/blank-generator'
 
 export function BlankPdfButtons() {
   const [generatingId, setGeneratingId] = useState<string | null>(null)
-  const categories = useQuery(api.categories.listActive)
-  const allBaseModels = useQuery(api.baseModels.list)
-  const allOptionGroups = useQuery(api.optionGroups.list)
-  const allOptions = useQuery(api.options.list)
-  const allSettings = useQuery(api.settings.list)
+  const categories = useOfflineQuery(
+    api.categories.listActive,
+    {},
+    async () => {
+      const all = await db.categories.filter((c) => c.isActive).sortBy('sortOrder')
+      return all.map((c) => ({ ...c, _id: c.id, imageUrl: null })) as any
+    },
+  )
+  const allBaseModels = useOfflineQuery(
+    api.baseModels.list,
+    {},
+    async () => {
+      const all = await db.baseModels.toArray()
+      return all.map((m) => ({ ...m, _id: m.id })) as any
+    },
+  )
+  const allOptionGroups = useOfflineQuery(
+    api.optionGroups.list,
+    {},
+    async () => {
+      const all = await db.optionGroups.toArray()
+      return all.map((g) => ({ ...g, _id: g.id })) as any
+    },
+  )
+  const allOptions = useOfflineQuery(
+    api.options.list,
+    {},
+    async () => {
+      const all = await db.options.toArray()
+      return all.map((o) => ({ ...o, _id: o.id })) as any
+    },
+  )
+  const allSettings = useOfflineQuery(
+    api.settings.list,
+    {},
+    async () => {
+      return await db.settings.toArray() as any
+    },
+  )
 
   const logoStorageId = allSettings?.find((s) => s.key === 'logoStorageId')?.value as string | undefined
   const logoUrl = useQuery(
@@ -68,8 +104,12 @@ export function BlankPdfButtons() {
       // Fetch logo and build settings for PDF
       let logoBytesForBlank: Uint8Array | undefined
       if (logoUrl) {
-        const res = await fetch(logoUrl)
-        logoBytesForBlank = new Uint8Array(await res.arrayBuffer())
+        try {
+          const res = await fetch(logoUrl)
+          logoBytesForBlank = new Uint8Array(await res.arrayBuffer())
+        } catch {
+          // Offline — proceed without logo
+        }
       }
       const settingsMap = allSettings
         ? Object.fromEntries(allSettings.map((s) => [s.key, s.value]))
@@ -78,8 +118,12 @@ export function BlankPdfButtons() {
       // Fetch category image
       let categoryImageBytes: Uint8Array | undefined
       if (categoryImageUrl) {
-        const res = await fetch(categoryImageUrl)
-        categoryImageBytes = new Uint8Array(await res.arrayBuffer())
+        try {
+          const res = await fetch(categoryImageUrl)
+          categoryImageBytes = new Uint8Array(await res.arrayBuffer())
+        } catch {
+          // Offline — proceed without category image
+        }
       }
 
       const pdfBytes = await generateBlankFormPdf(categoryId, catalogData, logoBytesForBlank, settingsMap, categoryImageBytes)
