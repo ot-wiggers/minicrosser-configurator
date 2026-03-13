@@ -168,7 +168,8 @@ export default defineSchema({
 
   // ── Customers ────────────────────────────────────────────
   customers: defineTable({
-    company: v.string(),
+    customerType: v.union(v.literal('business'), v.literal('private')),
+    company: v.optional(v.string()),
     firstName: v.string(),
     lastName: v.string(),
     street: v.optional(v.string()),
@@ -180,10 +181,30 @@ export default defineSchema({
     customerNumber: v.optional(v.string()),
     marketingConsent: v.optional(v.boolean()),
     marketingConsentDate: v.optional(v.number()),
+    notes: v.optional(v.string()),
   })
     .index('by_email', ['email'])
     .index('by_customerNumber', ['customerNumber'])
     .index('by_company', ['company']),
+
+  // ── Customer Actions (admin-configurable checklists) ─────
+  customerActions: defineTable({
+    label: v.string(),
+    description: v.optional(v.string()),
+    sortOrder: v.number(),
+    isActive: v.boolean(),
+  }).index('by_sortOrder', ['sortOrder']),
+
+  customerActionItems: defineTable({
+    customerId: v.id('customers'),
+    actionId: v.id('customerActions'),
+    checked: v.boolean(),
+    checkedAt: v.optional(v.number()),
+    checkedBy: v.optional(v.id('users')),
+    note: v.optional(v.string()),
+  })
+    .index('by_customer', ['customerId'])
+    .index('by_customer_action', ['customerId', 'actionId']),
 
   // ── Auth ─────────────────────────────────────────────────
   users: defineTable({

@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { useQuery } from 'convex/react'
+import { useOfflineQuery } from '@/hooks/use-offline-query'
+import { db } from '@/modules/storage/db'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { useConfiguratorStore } from '@/modules/configurator'
@@ -512,14 +514,36 @@ export function StudioLayout({ onCreateDocument, onViewChange }: StudioLayoutPro
   const { documentType, selectedCategory, selectedBaseModelId, selectedOptions, customLineItems, currentStep, setStep } =
     useConfiguratorStore()
 
-  const baseModel = useQuery(
+  const baseModel = useOfflineQuery(
     api.baseModels.getById,
     selectedBaseModelId ? { id: selectedBaseModelId as Id<'baseModels'> } : 'skip',
+    async () => {
+      if (!selectedBaseModelId) return undefined
+      const record = await db.baseModels.get(selectedBaseModelId)
+      if (!record) return undefined
+      return { ...record, _id: record.id, imageUrl: null } as any
+    },
   )
 
-  const groupsWithOptions = useQuery(
+  const groupsWithOptions = useOfflineQuery(
     api.optionGroups.listWithOptionsForCategory,
     selectedCategory ? { categoryId: selectedCategory, baseModelId: selectedBaseModelId ?? undefined } : 'skip',
+    async () => {
+      if (!selectedCategory) return undefined
+      const groups = await db.optionGroups.filter((g) => g.isActive).sortBy('sortOrder')
+      const allOptions = await db.options.filter((o) => o.isActive).toArray()
+      return groups
+        .filter((g) => g.appliesTo.length === 0 || g.appliesTo.includes(selectedCategory))
+        .map((g) => ({
+          ...g,
+          _id: g.id,
+          group: { ...g, _id: g.id },
+          items: allOptions
+            .filter((o) => o.optionGroupId === g.id)
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((o) => ({ ...o, _id: o.id, imageUrl: null })),
+        }))
+    },
   )
 
   const currentPhase = currentStep === 1 ? 'VEHICLE_CONFIG' : 'ACCESSORY'

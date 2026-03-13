@@ -7,6 +7,7 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../../../../convex/_generated/api'
 import type { Id } from '../../../../../../convex/_generated/dataModel'
 import { CustomerForm } from '@/components/admin/customer-form'
+import { CustomerActionsChecklist } from '@/components/customers/customer-actions-checklist'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -84,7 +85,9 @@ export default function CustomerDetailPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{customer.company}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {customer.company || `${customer.firstName} ${customer.lastName}`}
+            </h1>
             <p className="text-muted-foreground">
               {customer.firstName} {customer.lastName}
               {customer.customerNumber && (
@@ -165,6 +168,22 @@ export default function CustomerDetailPage() {
               )}
             </div>
           </div>
+          {(customer as any).notes && (
+            <div className="mt-4 border-t pt-4">
+              <span className="text-sm text-muted-foreground">Notizen</span>
+              <p className="whitespace-pre-wrap text-sm">{(customer as any).notes}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Customer Actions Checklist */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Aktionen</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CustomerActionsChecklist customerId={customerId} />
         </CardContent>
       </Card>
 

@@ -246,11 +246,27 @@ export const listForPipeline = query({
         ? emailEvents.sort((a, b) => b.timestamp - a.timestamp)[0]
         : null
 
+      // Count customer action items if customer is linked
+      let actionCount: { checked: number; total: number } | null = null
+      if (doc.customerId) {
+        const items = await ctx.db
+          .query('customerActionItems')
+          .withIndex('by_customer', (q) => q.eq('customerId', doc.customerId!))
+          .collect()
+        if (items.length > 0) {
+          actionCount = {
+            checked: items.filter((i) => i.checked).length,
+            total: items.length,
+          }
+        }
+      }
+
       results.push({
         ...doc,
         emailStatus: latestOutbox?.status ?? null,
         emailEvent: latestEvent?.eventType ?? null,
         emailError: latestOutbox?.status === 'FAILED' ? latestOutbox.lastError : null,
+        actionCount,
       })
     }
 

@@ -451,7 +451,7 @@ export const seedSampleData = action({
       },
     ]
     for (const k of kunden) {
-      await ctx.runMutation(api.customers.create, k)
+      await ctx.runMutation(api.customers.create, { ...k, customerType: 'business' as const })
     }
 
     // ══════════════════════════════════════════════════════
